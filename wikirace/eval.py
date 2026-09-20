@@ -66,9 +66,7 @@ def run_episode(
     """Run one race.
 
     Result fields:
-      steps   — click/translate (navigating) steps counted toward max_steps
-      scrolls — number of scroll actions (do not consume max_steps)
-      seconds — wall-clock from episode start to end (primary efficiency metric)
+      status, path, steps (total actions), clicks, scrolls, seconds, reason
     """
     try:
         env = make_env(task, lang=lang, headless=headless)
@@ -78,6 +76,7 @@ def run_episode(
             "status": "error",
             "reason": f"setup:{type(exc).__name__}: {exc}",
             "steps": 0,
+            "clicks": 0,
             "scrolls": 0,
             "path": [],
             "seconds": 0.0,
@@ -86,7 +85,6 @@ def run_episode(
         }
     try:
         state = env.observe()
-        # Early success if already on goal
         if env._goal_reached(state.current.title):
             return {
                 **_episode_base(task, brain),
@@ -95,6 +93,7 @@ def run_episode(
                 "status": "success",
                 "reason": "already_on_goal",
                 "steps": 0,
+                "clicks": 0,
                 "scrolls": 0,
                 "path": env.path,
                 "seconds": 0.0,
@@ -121,7 +120,10 @@ def run_episode(
                     {
                         "step": state.step,
                         "current": state.current.title,
-                        "n_candidates": len(state.candidates),
+                        "n_viewport": len(state.viewport),
+                        "n_memory": len(state.memory),
+                        "can_scroll_down": state.action.can_scroll_down,
+                        "can_scroll_up": state.action.can_scroll_up,
                         "action": None,
                         "chosen_title": None,
                         "latency_ms": 0,
@@ -129,6 +131,11 @@ def run_episode(
                         "brain_debug_keys": [],
                     }
                 )
+                break
+
+            # Exhausted budget with no action left
+            if state.action.remaining_steps <= 0:
+                status, reason = "fail", "max_steps"
                 break
 
             step_t0 = time.time()
@@ -155,14 +162,20 @@ def run_episode(
                 {
                     "step": state.step,
                     "current": state.current.title,
-                    "n_candidates": len(state.candidates),
+                    "n_viewport": len(state.viewport),
+                    "n_memory": len(state.memory),
+                    "can_scroll_down": state.action.can_scroll_down,
+                    "can_scroll_up": state.action.can_scroll_up,
                     "action": action_dict,
                     "chosen_title": None if not moved or not moved.ok else moved.title,
                     "latency_ms": int((time.time() - step_t0) * 1000),
                     "error": err,
                     "brain_debug_keys": list(debug.keys()),
+                    "recovery_scrolls": getattr(moved, "recovery_scrolls", 0) if moved else 0,
+                    "actions_consumed": getattr(moved, "actions_consumed", 1) if moved else 0,
+                    "steps_so_far": env.step_count,
+                    "clicks_so_far": env.click_count,
                     "scrolls_so_far": env.scroll_count,
-                    "nav_steps_so_far": env.step_count,
                 }
             )
             if status != "running":
@@ -175,6 +188,7 @@ def run_episode(
             "status": status,
             "reason": reason,
             "steps": env.step_count,
+            "clicks": env.click_count,
             "scrolls": env.scroll_count,
             "path": env.path,
             "seconds": round(time.time() - t0, 3),
@@ -200,15 +214,20 @@ def summarize(rows: list[dict]) -> dict:
             if n_wins == 0
             else round(sum(r["steps"] for r in wins) / n_wins, 2)
         ),
-        "avg_scrolls_on_success": (
+        "avg_clicks": (
             None
-            if n_wins == 0
-            else round(sum(int(r.get("scrolls") or 0) for r in wins) / n_wins, 2)
+            if n == 0
+            else round(sum(int(r.get("clicks") or 0) for r in rows) / n, 2)
         ),
-        "avg_seconds_on_success": (
+        "avg_scrolls": (
             None
-            if n_wins == 0
-            else round(sum(float(r.get("seconds") or 0) for r in wins) / n_wins, 3)
+            if n == 0
+            else round(sum(int(r.get("scrolls") or 0) for r in rows) / n, 2)
+        ),
+        "avg_seconds": (
+            None
+            if n == 0
+            else round(sum(float(r.get("seconds") or 0) for r in rows) / n, 3)
         ),
     }
 
@@ -234,7 +253,8 @@ def run_suite(
                 fh.flush()
                 print(
                     f"{row['brain']:10} {row['task_id']} {row['status']:8} "
-                    f"steps={row['steps']} scrolls={row.get('scrolls', 0)} "
+                    f"steps={row['steps']} clicks={row.get('clicks', 0)} "
+                    f"scrolls={row.get('scrolls', 0)} "
                     f"sec={row.get('seconds')} {row['reason']}"
                 )
     return rows

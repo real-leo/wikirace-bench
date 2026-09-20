@@ -6,35 +6,67 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class Candidate(BaseModel):
+    """Public candidate offered to the brain (no real href)."""
+
     id: str
     title: str
-    href: str = ""
+    context: str = ""  # short sentence context around the link
+    position: str = "current_viewport"  # e.g. current_viewport | prev_viewport | scrollY=1234
+    # Legacy / offline fields (optional)
     text: str = ""
-    # Legacy offline fixture may still carry a short extract
     extract: str = ""
 
 
 class PageRef(BaseModel):
     title: str
+    description: str = ""  # short goal / page description
+    # Back-compat alias used in older dumps
     extract: str = ""
+
+    def model_post_init(self, __context: Any) -> None:
+        if self.description and not self.extract:
+            object.__setattr__(self, "extract", self.description)
+        elif self.extract and not self.description:
+            object.__setattr__(self, "description", self.extract)
+
+
+class ActionState(BaseModel):
+    path: list[str] = Field(default_factory=list)
+    step: int = 0
+    max_steps: int = 12
+    remaining_steps: int = 12
+    can_scroll_down: bool = True
+    can_scroll_up: bool = False
 
 
 class RaceState(BaseModel):
-    """Observation every brain sees. Candidates are viewport-visible (browser mode)
-    or full-page (fixture/live API). Renumbered each observe as L001, L002, ...
+    """Observation every brain sees each step.
+
+    - viewport: links visible in the current browser viewport (main content)
+    - memory: union of current + previous screen links (v1, no extra model filter)
+    - offered click ids = viewport ∪ memory
+    Real hrefs stay in the executor only.
     """
 
     task: str = "wikirace"
     goal: PageRef
     current: PageRef
+    viewport: list[Candidate] = Field(default_factory=list)
+    memory: list[Candidate] = Field(default_factory=list)
+    action: ActionState = Field(default_factory=ActionState)
+    source: str = "browser"
+
+    # Convenience mirrors (also in action) for older brains / dumps
     history: list[str] = Field(default_factory=list)
     step: int = 0
     max_steps: int = 12
-    candidates: list[Candidate] = Field(default_factory=list)
-    source: str = "browser"
+    candidates: list[Candidate] = Field(default_factory=list)  # = offered set
+
+    def offered_ids(self) -> set[str]:
+        return {c.id for c in self.candidates}
 
     def candidate_ids(self) -> set[str]:
-        return {c.id for c in self.candidates}
+        return self.offered_ids()
 
     def candidate_for(self, link_id: str) -> Candidate | None:
         for c in self.candidates:
@@ -47,7 +79,38 @@ class RaceState(BaseModel):
         return c.title if c else None
 
     def to_public_dict(self) -> dict[str, Any]:
-        return self.model_dump()
+        """Observation payload for LLM / Jev (no href)."""
+        return {
+            "task": self.task,
+            "goal": {
+                "title": self.goal.title,
+                "description": self.goal.description or self.goal.extract,
+            },
+            "current": {
+                "title": self.current.title,
+                "description": self.current.description or self.current.extract,
+            },
+            "viewport": [
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "context": c.context or c.text or c.extract,
+                    "position": c.position,
+                }
+                for c in self.viewport
+            ],
+            "memory": [
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "context": c.context or c.text or c.extract,
+                    "position": c.position,
+                }
+                for c in self.memory
+            ],
+            "action": self.action.model_dump(),
+            "source": self.source,
+        }
 
 
 ActionName = Literal["click", "scroll", "translate"]
@@ -60,7 +123,7 @@ class Action(BaseModel):
 
     {"action":"click","link_id":"L001"}
     {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
-    {"action":"translate","target_lang":"zh"}
+    {"action":"translate","target_lang":"zh"}  # optional; also costs one step
     """
 
     action: ActionName
@@ -90,9 +153,17 @@ def parse_action(raw: Any) -> Action:
     """Parse brain output into Action. Accepts dict or JSON-like objects.
 
     Legacy: bare {"link_id":"L001"} is treated as click.
+    SCROLL_DOWN / SCROLL_UP choice keys map to scroll actions.
     """
     if isinstance(raw, Action):
         return raw
+    if isinstance(raw, str):
+        s = raw.strip()
+        if s == "SCROLL_DOWN":
+            return Action(action="scroll", direction="down", amount="page")
+        if s == "SCROLL_UP":
+            return Action(action="scroll", direction="up", amount="page")
+        return Action(action="click", link_id=s)
     if not isinstance(raw, dict):
         raise ValueError(f"action_not_object:{type(raw).__name__}")
     data = dict(raw)

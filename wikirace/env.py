@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from wikirace.browser import WikiBrowser, normalize_wiki_title
-from wikirace.state import Action, Candidate, PageRef, RaceState, parse_action
+from wikirace.state import Action, ActionState, Candidate, PageRef, RaceState, parse_action
 from wikirace.wiki import WikiSource
 
 if TYPE_CHECKING:
@@ -12,10 +12,8 @@ if TYPE_CHECKING:
 
 MAX_CANDIDATES = 255
 EXTRACT_CACHE_CHARS = 180
-# Consecutive no-op scrolls (already at bottom/top) before failing the episode.
-# Choice: fail with reason `scroll_noop_limit` rather than auto-hiding SCROLL_DOWN,
-# so Jev criteria can keep offering scroll fairly while still bounding stuck agents.
-SCROLL_NOOP_LIMIT = 3
+# Recovery scrolls when clicking an off-screen memory link (cap per click).
+MAX_RECOVERY_SCROLLS = 20
 
 
 @dataclass
@@ -26,18 +24,22 @@ class StepResult:
     done: bool = False
     failed: bool = False
     action: str = ""
+    # How many actions this step consumed (recovery scrolls + click can be >1)
+    actions_consumed: int = 1
+    recovery_scrolls: int = 0
 
 
 @dataclass
 class RaceEnv:
-    """WikiRace environment.
+    """WikiRace environment — equal-cost actions.
 
     Primary mode: source=browser (DrissionPage, viewport-visible links).
-    Offline: fixture / live MediaWiki API (full-page links, no scroll/translate).
+    Offline: fixture / live MediaWiki API (full-page links, no real scroll).
 
-    Step budget (`max_steps`) counts only navigating actions: click and translate.
-    Scroll does not consume the step budget (pages have finite height); efficiency
-    is measured by wall-clock seconds. Scrolls are still recorded in the trace.
+    Every action (click, scroll, translate) costs one step toward max_steps.
+    Clicking a remembered off-screen link auto-scrolls toward it; each recovery
+    scroll also costs one step, then the click costs one more.
+    At page bottom SCROLL_DOWN is not offered; at top SCROLL_UP is not offered.
     """
 
     start: str
@@ -49,12 +51,15 @@ class RaceEnv:
     lang: str = "en"
     current: str = ""
     path: list[str] = field(default_factory=list)
-    step_count: int = 0  # click / translate (nav) steps only
+    step_count: int = 0  # total actions (clicks + scrolls + translates + recovery)
+    click_count: int = 0
     scroll_count: int = 0
-    scroll_noop_streak: int = 0
     extracts: dict[str, str] = field(default_factory=dict)
     link_cache: dict[str, list[str]] = field(default_factory=dict)
     _last_state: RaceState | None = None
+    # Previous viewport candidates (public Candidate list) for memory union
+    _prev_viewport: list[Candidate] = field(default_factory=list)
+    _curr_viewport: list[Candidate] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.reset()
@@ -67,9 +72,11 @@ class RaceEnv:
         self.current = self.start
         self.path = [self.start]
         self.step_count = 0
+        self.click_count = 0
         self.scroll_count = 0
-        self.scroll_noop_streak = 0
         self._last_state = None
+        self._prev_viewport = []
+        self._curr_viewport = []
         if self.is_browser:
             assert self.browser is not None
             self.browser.open_article(self.start)
@@ -106,34 +113,95 @@ class RaceEnv:
     def _goal_reached(self, title: str) -> bool:
         return normalize_wiki_title(title) == normalize_wiki_title(self.goal)
 
+    def _scroll_flags(self) -> tuple[bool, bool]:
+        if not self.is_browser:
+            return False, False
+        assert self.browser is not None
+        m = self.browser.scroll_metrics()
+        can_down = not bool(m.get("at_bottom"))
+        can_up = not bool(m.get("at_top"))
+        return can_down, can_up
+
+    def _build_memory(self, viewport: list[Candidate]) -> list[Candidate]:
+        """Union of previous screen + current screen; prefer keeping both fully."""
+        by_id: dict[str, Candidate] = {}
+        for c in self._prev_viewport:
+            # Mark previous-screen links
+            by_id[c.id] = c.model_copy(
+                update={"position": c.position if c.position.startswith("scrollY") else "prev_viewport"}
+            )
+        for c in viewport:
+            by_id[c.id] = c  # current wins on overlap
+        # Cap if enormous (Choice limit 255 including scroll options)
+        items = list(by_id.values())
+        if len(items) > MAX_CANDIDATES - 2:
+            # Prefer all current, then fill from prev
+            cur_ids = {c.id for c in viewport}
+            cur = [c for c in items if c.id in cur_ids]
+            prev = [c for c in items if c.id not in cur_ids]
+            items = (cur + prev)[: MAX_CANDIDATES - 2]
+        return items
+
     def observe(self) -> RaceState:
+        can_down, can_up = self._scroll_flags()
+        remaining = max(0, self.max_steps - self.step_count)
+
         if self.is_browser:
             assert self.browser is not None
             meta = self.browser.current_meta()
             if meta["title"]:
                 self.current = meta["title"]
             visible = self.browser.observe_links()
-            candidates = [
-                Candidate(id=v.id, title=v.title, href=v.href, text=v.text)
+            metrics = self.browser.scroll_metrics()
+            scroll_y = float(metrics.get("y") or 0)
+            viewport = [
+                Candidate(
+                    id=v.id,
+                    title=v.title,
+                    context=v.context or v.text,
+                    text=v.text,
+                    position=f"current_viewport|scrollY={int(scroll_y)}",
+                )
                 for v in visible
             ]
+            # On first observe after navigation, prev is empty; after scroll,
+            # caller should have rotated prev←curr before observe. If not yet
+            # rotated (first call), prev stays [].
+            memory = self._build_memory(viewport)
+            self._curr_viewport = viewport
+
             current_extract = meta.get("extract", "")[:EXTRACT_CACHE_CHARS]
             goal_extract = self.extracts.get(self.goal, "")
             if not goal_extract:
                 goal_extract = f"Reach the Wikipedia article titled {self.goal}."
+
+            action_state = ActionState(
+                path=list(self.path),
+                step=self.step_count,
+                max_steps=self.max_steps,
+                remaining_steps=remaining,
+                can_scroll_down=can_down,
+                can_scroll_up=can_up,
+            )
             state = RaceState(
-                goal=PageRef(title=self.goal, extract=goal_extract[:EXTRACT_CACHE_CHARS]),
-                current=PageRef(title=self.current, extract=current_extract),
+                goal=PageRef(
+                    title=self.goal,
+                    description=goal_extract[:EXTRACT_CACHE_CHARS],
+                ),
+                current=PageRef(title=self.current, description=current_extract),
+                viewport=viewport,
+                memory=memory,
+                action=action_state,
                 history=list(self.path),
                 step=self.step_count,
                 max_steps=self.max_steps,
-                candidates=candidates,
+                candidates=memory,  # offered set = memory union
                 source=self.source,
             )
             self._last_state = state
             return state
 
-        # Fixture / MediaWiki API: full-page links
+        # Fixture / MediaWiki API: full-page links (no real viewport/scroll)
         assert self.wiki is not None
         self._ensure(self.current)
         raw_links = self.link_cache[self.current]
@@ -148,14 +216,28 @@ class RaceEnv:
                 Candidate(
                     id=f"L{i:03d}",
                     title=title,
-                    href="",
+                    context=extract or title,
                     text=title,
                     extract=extract,
+                    position="current_viewport",
                 )
             )
+        action_state = ActionState(
+            path=list(self.path),
+            step=self.step_count,
+            max_steps=self.max_steps,
+            remaining_steps=remaining,
+            can_scroll_down=False,
+            can_scroll_up=False,
+        )
         state = RaceState(
-            goal=PageRef(title=self.goal, extract=self._short_extract(self.goal)),
-            current=PageRef(title=self.current, extract=self._short_extract(self.current)),
+            goal=PageRef(title=self.goal, description=self._short_extract(self.goal)),
+            current=PageRef(
+                title=self.current, description=self._short_extract(self.current)
+            ),
+            viewport=candidates,
+            memory=candidates,
+            action=action_state,
             history=list(self.path),
             step=self.step_count,
             max_steps=self.max_steps,
@@ -165,15 +247,19 @@ class RaceEnv:
         self._last_state = state
         return state
 
-    def step(self, action_raw: Action | dict | str) -> StepResult:
-        """Apply one action.
+    def _rotate_viewport_memory(self) -> None:
+        """After a scroll, current becomes previous for the next observe."""
+        self._prev_viewport = list(self._curr_viewport)
 
-        Click / translate consume one step toward max_steps.
-        Scroll does not; it is recorded via scroll_count / trace only.
-        """
-        # Legacy: bare link_id string
+    def _bump(self, n: int = 1) -> bool:
+        """Consume n actions; return True if max_steps exhausted."""
+        self.step_count += n
+        return self.step_count >= self.max_steps
+
+    def step(self, action_raw: Action | dict | str) -> StepResult:
+        """Apply one brain action. Scroll and click each cost ≥1 toward max_steps."""
         if isinstance(action_raw, str):
-            action_raw = {"action": "click", "link_id": action_raw}
+            action_raw = parse_action(action_raw)
         try:
             action = parse_action(action_raw)
         except Exception as exc:
@@ -186,15 +272,10 @@ class RaceEnv:
         if action.action == "click":
             return self._step_click(action, state)
         if action.action == "scroll":
-            return self._step_scroll(action)
+            return self._step_scroll(action, state)
         if action.action == "translate":
             return self._step_translate(action)
         return StepResult(False, None, f"unknown_action:{action.action}", failed=True)
-
-    def _bump_nav_step(self) -> bool:
-        """Increment navigating step counter; return True if max_steps exhausted."""
-        self.step_count += 1
-        return self.step_count >= self.max_steps
 
     def _step_click(self, action: Action, state: RaceState) -> StepResult:
         link_id = action.link_id or ""
@@ -204,31 +285,97 @@ class RaceEnv:
                 False, None, f"illegal_id:{link_id}", failed=True, action="click"
             )
 
+        recovery = 0
         if self.is_browser:
             assert self.browser is not None
+            # If remembered but not currently visible, auto-scroll toward it
+            # (each recovery scroll costs one step), then click.
+            if not self.browser.link_in_viewport(link_id):
+                while (
+                    not self.browser.link_in_viewport(link_id)
+                    and recovery < MAX_RECOVERY_SCROLLS
+                    and self.step_count + recovery < self.max_steps
+                ):
+                    metrics = self.browser.scroll_toward_link(link_id)
+                    recovery += 1
+                    self.scroll_count += 1
+                    if not metrics.get("changed") and not metrics.get("in_viewport"):
+                        # Stuck; stop recovery
+                        break
+                    if metrics.get("in_viewport"):
+                        break
+                self.step_count += recovery
+                if self.step_count >= self.max_steps and not self.browser.link_in_viewport(
+                    link_id
+                ):
+                    return StepResult(
+                        True,
+                        self.current,
+                        "max_steps",
+                        failed=True,
+                        action="click",
+                        actions_consumed=recovery,
+                        recovery_scrolls=recovery,
+                    )
+                if not self.browser.link_in_viewport(link_id):
+                    # Fall through: try click via registry href / navigate
+                    pass
+
             hit = self.browser.click_link(link_id)
             if hit is None:
                 return StepResult(
-                    False, None, f"illegal_id:{link_id}", failed=True, action="click"
+                    False,
+                    None,
+                    f"illegal_id:{link_id}",
+                    failed=True,
+                    action="click",
+                    actions_consumed=recovery,
+                    recovery_scrolls=recovery,
                 )
             meta = self.browser.current_meta()
             title = meta["title"] or hit.title
+            # New page: clear viewport memory
+            self._prev_viewport = []
+            self._curr_viewport = []
         else:
             title = cand.title
             self.current = title
 
         self.current = title
         self.path.append(title)
-        self.scroll_noop_streak = 0  # new page resets bottom-stuck streak
-        exhausted = self._bump_nav_step()
+        self.click_count += 1
+        exhausted = self._bump(1)
 
         if self._goal_reached(title):
-            return StepResult(True, title, "reached_goal", done=True, action="click")
+            return StepResult(
+                True,
+                title,
+                "reached_goal",
+                done=True,
+                action="click",
+                actions_consumed=recovery + 1,
+                recovery_scrolls=recovery,
+            )
         if exhausted:
-            return StepResult(True, title, "max_steps", failed=True, action="click")
-        return StepResult(True, title, "moved", action="click")
+            return StepResult(
+                True,
+                title,
+                "max_steps",
+                failed=True,
+                action="click",
+                actions_consumed=recovery + 1,
+                recovery_scrolls=recovery,
+            )
+        return StepResult(
+            True,
+            title,
+            "moved",
+            action="click",
+            actions_consumed=recovery + 1,
+            recovery_scrolls=recovery,
+        )
 
-    def _step_scroll(self, action: Action) -> StepResult:
+    def _step_scroll(self, action: Action, state: RaceState) -> StepResult:
         direction = action.direction or "down"
         amount = action.amount or "page"
         if direction not in ("up", "down"):
@@ -236,34 +383,44 @@ class RaceEnv:
                 False, None, f"bad_direction:{direction}", failed=True, action="scroll"
             )
 
-        self.scroll_count += 1
-        changed = True
-        if self.is_browser:
-            assert self.browser is not None
-            metrics = self.browser.scroll(direction=direction, amount=amount or "page")
-            changed = bool(metrics.get("changed", True))
-        # Offline: scroll is a recorded no-op on the link set (no viewport).
-
-        if not changed:
-            self.scroll_noop_streak += 1
-            if self.scroll_noop_streak >= SCROLL_NOOP_LIMIT:
-                return StepResult(
-                    True,
-                    self.current,
-                    "scroll_noop_limit",
-                    failed=True,
-                    action="scroll",
-                )
+        # Physical: refuse scroll past edges (should not be offered, but guard)
+        if direction == "down" and not state.action.can_scroll_down:
             return StepResult(
-                True,
+                False,
                 self.current,
-                f"scrolled_{direction}_noop",
+                "scroll_down_unavailable",
+                failed=True,
+                action="scroll",
+            )
+        if direction == "up" and not state.action.can_scroll_up:
+            return StepResult(
+                False,
+                self.current,
+                "scroll_up_unavailable",
+                failed=True,
                 action="scroll",
             )
 
-        self.scroll_noop_streak = 0
-        # Scroll never fails via max_steps.
-        return StepResult(True, self.current, f"scrolled_{direction}", action="scroll")
+        # Rotate memory: current viewport becomes previous before scrolling
+        self._rotate_viewport_memory()
+
+        if self.is_browser:
+            assert self.browser is not None
+            self.browser.scroll(direction=direction, amount=amount or "page")
+
+        self.scroll_count += 1
+        exhausted = self._bump(1)
+        if exhausted:
+            return StepResult(
+                True,
+                self.current,
+                "max_steps",
+                failed=True,
+                action="scroll",
+            )
+        return StepResult(
+            True, self.current, f"scrolled_{direction}", action="scroll"
+        )
 
     def _step_translate(self, action: Action) -> StepResult:
         target = (action.target_lang or "").strip()
@@ -274,8 +431,9 @@ class RaceEnv:
         if self.is_browser:
             assert self.browser is not None
             self.browser.translate(target)
-        self.scroll_noop_streak = 0
-        exhausted = self._bump_nav_step()
+        self._prev_viewport = []
+        self._curr_viewport = []
+        exhausted = self._bump(1)
         if exhausted:
             return StepResult(
                 True, self.current, "max_steps", failed=True, action="translate"

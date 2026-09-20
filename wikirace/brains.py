@@ -28,22 +28,35 @@ def _overlap(a: str, b: str) -> int:
 
 
 class OverlapBrain(Brain):
-    """Heuristic: click highest title/text overlap with goal; else scroll down."""
+    """Heuristic: click highest overlap with goal; else scroll down if allowed."""
 
     name = "overlap"
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        goal = state.goal.title + " " + state.goal.extract
-        if not state.candidates:
-            action = Action(action="scroll", direction="down", amount="page")
-            return action, {"policy": "scroll_no_candidates"}
+        goal = state.goal.title + " " + (state.goal.description or state.goal.extract)
+        offered = state.candidates
+        if not offered:
+            if state.action.can_scroll_down:
+                return (
+                    Action(action="scroll", direction="down", amount="page"),
+                    {"policy": "scroll_no_candidates"},
+                )
+            if state.action.can_scroll_up:
+                return (
+                    Action(action="scroll", direction="up", amount="page"),
+                    {"policy": "scroll_up_no_candidates"},
+                )
+            # Nowhere to go — click impossible; pick a no-op scroll that will fail
+            return (
+                Action(action="scroll", direction="down", amount="page"),
+                {"policy": "stuck_no_candidates"},
+            )
 
-        best_id = state.candidates[0].id
-        best = -10**9
-        for c in state.candidates:
-            blob = f"{c.title} {c.text} {c.extract}"
+        best_id = offered[0].id
+        best = -(10**9)
+        for c in offered:
+            blob = f"{c.title} {c.context or c.text} {c.extract}"
             s = _overlap(blob, goal)
-            # Strong bonus for exact / near title match
             if c.title.lower() == state.goal.title.lower():
                 s += 100
             if state.history and c.title == state.history[-1]:
@@ -53,17 +66,27 @@ class OverlapBrain(Brain):
             if s > best:
                 best, best_id = s, c.id
 
-        # If nothing overlaps meaningfully, explore by scrolling
-        if best <= 0 and state.source in ("browser", "live_browser"):
-            action = Action(action="scroll", direction="down", amount="page")
-            return action, {"policy": "scroll_low_overlap", "best_score": best}
+        if best <= 0 and state.action.can_scroll_down and state.source in (
+            "browser",
+            "live_browser",
+        ):
+            return (
+                Action(action="scroll", direction="down", amount="page"),
+                {"policy": "scroll_low_overlap", "best_score": best},
+            )
 
-        action = Action(action="click", link_id=best_id)
-        return action, {"policy": "token_overlap", "score": best, "link_id": best_id}
+        return (
+            Action(action="click", link_id=best_id),
+            {"policy": "token_overlap", "score": best, "link_id": best_id},
+        )
 
 
 class JevBrain(Brain):
-    """Typesafe Jev Choice over click candidates; SCROLL_DOWN always offered in browser."""
+    """Typesafe Choice over offered link ids + SCROLL_DOWN/UP when physically allowed.
+
+    The MODEL decides scroll vs click. No Noul gate. Scroll and click each cost
+    one step toward max_steps.
+    """
 
     name = "jev"
 
@@ -71,66 +94,99 @@ class JevBrain(Brain):
         self.model = model
         self.api_key = os.environ["TYPESAFE_API_KEY"]
         self.base = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
-        # Debug-only counter; does not gate SCROLL_DOWN availability.
-        self._scroll_streak = 0
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        if not state.candidates:
-            self._scroll_streak += 1
-            action = Action(action="scroll", direction="down", amount="page")
-            return action, {"policy": "jev_scroll_empty", "scroll_streak": self._scroll_streak}
-
-        criteria: dict[str, Any] = {
-            c.id: {
+        criteria: dict[str, Any] = {}
+        for c in state.candidates:
+            pos = c.position or "current_viewport"
+            in_view = "current_viewport" in pos
+            criteria[c.id] = {
                 "title": c.title,
-                "text": (c.text or c.extract or "")[:240],
-                "what": f"Click the Wikipedia link titled {c.title!r}",
-            }
-            for c in state.candidates
-        }
-        # Fair eval: always include SCROLL_DOWN in browser mode (scroll is free of
-        # the click/nav step budget; efficiency is wall-clock seconds).
-        scroll_key = None
-        if state.source in ("browser", "live_browser"):
-            scroll_key = "SCROLL_DOWN"
-            criteria[scroll_key] = {
-                "title": "(scroll down)",
-                "text": (
-                    "Scroll one page down to reveal more article links. "
-                    "Prefer a bridge click when any visible link helps toward the goal. "
-                    "Scroll does not consume the click step budget."
+                "context": (c.context or c.text or c.extract or "")[:240],
+                "position": pos,
+                "what": (
+                    f"Click the Wikipedia link titled {c.title!r}"
+                    + (
+                        " (currently visible)."
+                        if in_view
+                        else " (remembered from another viewport; executor will "
+                        "scroll back, counting recovery scrolls as steps)."
+                    )
                 ),
-                "what": "Scroll down one page; do not click.",
-                "not_for": "Do not scroll when any visible link is a plausible bridge toward the goal.",
             }
 
+        scroll_keys: list[str] = []
+        if state.source in ("browser", "live_browser"):
+            if state.action.can_scroll_down:
+                criteria["SCROLL_DOWN"] = {
+                    "title": "(scroll down)",
+                    "what": "Scroll one page down to reveal more article links.",
+                    "not_for": (
+                        "Do not scroll when a visible or remembered link is already "
+                        "a reasonable bridge toward the goal. Scroll costs one step, "
+                        "same as a click."
+                    ),
+                }
+                scroll_keys.append("SCROLL_DOWN")
+            if state.action.can_scroll_up:
+                criteria["SCROLL_UP"] = {
+                    "title": "(scroll up)",
+                    "what": "Scroll one page up.",
+                    "not_for": (
+                        "Do not scroll up unless you expect a better bridge above. "
+                        "Scroll costs one step, same as a click."
+                    ),
+                }
+                scroll_keys.append("SCROLL_UP")
+
+        if not criteria:
+            # Absolute stuck (no links, cannot scroll)
+            action = Action(action="scroll", direction="down", amount="page")
+            return action, {"policy": "jev_stuck_empty"}
+
+        remaining = state.action.remaining_steps
         payload = {
             "model": self.model,
             "state": {
                 "task": "wikirace",
-                "goal": state.goal.model_dump(),
-                "current": state.current.model_dump(),
-                "history": state.history,
-                "step": state.step,
-                "max_steps": state.max_steps,
-                "n_candidates": len(state.candidates),
-                "scroll_streak": self._scroll_streak,
+                "goal": {
+                    "title": state.goal.title,
+                    "description": state.goal.description or state.goal.extract,
+                },
+                "current": {
+                    "title": state.current.title,
+                    "description": state.current.description or state.current.extract,
+                },
+                "path": state.action.path or state.history,
+                "step": state.action.step,
+                "max_steps": state.action.max_steps,
+                "remaining_steps": remaining,
+                "can_scroll_down": state.action.can_scroll_down,
+                "can_scroll_up": state.action.can_scroll_up,
+                "n_viewport": len(state.viewport),
+                "n_memory": len(state.memory),
             },
             "questions": {
                 "next": {
                     "type": "choice",
                     "instructions": {
                         "question": (
-                            "WikiRace: choose the single next action that best progresses "
-                            "toward the goal page."
+                            "WikiRace: choose the single next action that best "
+                            "progresses toward the goal page while minimizing "
+                            "total actions."
                         ),
                         "focus": (
-                            "Prefer a conceptual bridge click over scrolling. "
-                            "Avoid backtracking to pages already in history unless stuck. "
-                            "SCROLL_DOWN is always available in browser mode and does not "
-                            "consume the click step budget (max_steps counts clicks only); "
-                            "choose it when no visible link is a plausible bridge. "
-                            "Efficiency is wall-clock time, so avoid pointless scrolling."
+                            "Scroll and click each cost one step; minimize total "
+                            "actions to reach the goal. "
+                            "A current best candidate need not match the goal "
+                            "directly — a reasonable conceptual bridge is enough. "
+                            "Only scroll if you expect clearly more valuable "
+                            "candidates by scrolling. "
+                            "Prefer an early click on a reasonable bridge over "
+                            "waiting for a near-synonym with the goal. "
+                            "Avoid backtracking to pages already on the path "
+                            "unless stuck. "
+                            f"Remaining steps: {remaining}."
                         ),
                         "goal_title": state.goal.title,
                     },
@@ -150,50 +206,67 @@ class JevBrain(Brain):
             r.raise_for_status()
             data = r.json()
         choice = data["answers"]["next"]["choice"]
-        if scroll_key and choice == scroll_key:
-            self._scroll_streak += 1
+        if choice == "SCROLL_DOWN":
             action = Action(action="scroll", direction="down", amount="page")
+        elif choice == "SCROLL_UP":
+            action = Action(action="scroll", direction="up", amount="page")
         else:
             if choice not in {c.id for c in state.candidates}:
-                # Unexpected option; pick highest non-scroll probability if available.
                 probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
                 ranked = sorted(
-                    ((k, v) for k, v in probs.items() if k != "SCROLL_DOWN" and k in criteria),
+                    (
+                        (k, v)
+                        for k, v in probs.items()
+                        if k not in ("SCROLL_DOWN", "SCROLL_UP") and k in criteria
+                    ),
                     key=lambda kv: kv[1],
                     reverse=True,
                 )
-                choice = ranked[0][0] if ranked else state.candidates[0].id
-            self._scroll_streak = 0
+                choice = ranked[0][0] if ranked else (
+                    state.candidates[0].id if state.candidates else "SCROLL_DOWN"
+                )
+                if choice in ("SCROLL_DOWN", "SCROLL_UP"):
+                    action = Action(
+                        action="scroll",
+                        direction="down" if choice == "SCROLL_DOWN" else "up",
+                        amount="page",
+                    )
+                    return action, {"request": payload, "response": data, "fallback": True}
             action = Action(action="click", link_id=choice)
         return action, {
             "request": payload,
             "response": data,
-            "scroll_streak": self._scroll_streak,
-            "scroll_offered": scroll_key is not None,
+            "scroll_offered": scroll_keys,
         }
 
 
 LLM_SYSTEM = """You are a WikiRace agent controlling a live Wikipedia browser.
-Each step you ONLY see links currently visible in the browser viewport (candidates).
+Each step you see: goal, current viewport links (with sentence context), candidate
+memory (union of current + previous screen), and action state (path, steps left,
+can_scroll_down / can_scroll_up).
+
 You must return ONE JSON action, nothing else.
 
-Actions:
-1. Click a visible link: {"action":"click","link_id":"L001"}
-   - link_id MUST be one of the provided candidate ids. Inventing ids or titles fails the race.
-   - Clicks consume the step budget (max_steps).
-2. Scroll the page: {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
-   - Use when no good link is visible. Scroll does NOT consume max_steps (pages are finite height).
-   - Efficiency is wall-clock time — avoid endless scrolling at the bottom.
-3. Translate page: {"action":"translate","target_lang":"zh"}
-   - Optional; wraps current URL in Google Translate. Consumes a step like a click.
+Actions (EQUAL COST — each consumes one step toward max_steps):
+1. Click an offered link: {"action":"click","link_id":"L001"}
+   - link_id MUST be in viewport ∪ memory ids. Inventing ids fails the race.
+   - Clicking a remembered off-screen link makes the executor scroll back first;
+     those recovery scrolls also cost steps.
+2. Scroll: {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
+   - Only when can_scroll_down / can_scroll_up is true (bottom drops SCROLL_DOWN;
+     top drops SCROLL_UP).
+3. Translate (optional): {"action":"translate","target_lang":"zh"} — also costs one step.
 
-Strategy: prefer clicks that bridge toward the goal; scroll to reveal more links; avoid loops.
+Strategy:
+- Minimize total actions to reach the goal.
+- A reasonable conceptual bridge is enough; do not wait for a near-synonym.
+- Only scroll if you expect clearly more valuable candidates by scrolling.
+- Prefer an early click on a reasonable bridge over endless scrolling.
 Never invent page titles. Never explain. JSON only."""
 
 
 def _parse_llm_action(content: str) -> Action:
     content = content.strip()
-    # Strip markdown fences if any
     if content.startswith("```"):
         content = re.sub(r"^```(?:json)?\s*", "", content)
         content = re.sub(r"\s*```$", "", content)

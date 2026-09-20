@@ -1,4 +1,4 @@
-"""Live Wikipedia via DrissionPage: viewport-visible links only."""
+"""Live Wikipedia via DrissionPage: viewport-visible links with sentence context."""
 from __future__ import annotations
 
 import re
@@ -44,6 +44,9 @@ class VisibleLink:
     title: str
     href: str
     text: str
+    context: str = ""
+    scroll_y: float = 0.0
+    abs_y: float = 0.0  # document Y of link top
 
 
 # DrissionPage run_js requires a top-level `return` to yield a value.
@@ -56,11 +59,17 @@ return (() => {
   if (!root) return [];
   const vh = window.innerHeight || document.documentElement.clientHeight;
   const vw = window.innerWidth || document.documentElement.clientWidth;
+  const scrollY = window.scrollY || window.pageYOffset || 0;
   const seen = new Set();
   const out = [];
   const anchors = root.querySelectorAll('a[href]');
   for (const a of anchors) {
-    if (a.closest('.navbox, .vertical-navbox, .toc, .mw-editsection, .reference, .noprint')) {
+    if (a.closest(
+      'nav, .navbox, .vertical-navbox, .toc, .mw-editsection, .reference, '
+      + '.noprint, .sidebar, .infobox, .hatnote, .metadata, footer, #footer, '
+      + '#mw-navigation, #mw-panel, #mw-head, .vector-header, .vector-toc, '
+      + '.mw-footer, .catlinks'
+    )) {
       continue;
     }
     const href = a.href || '';
@@ -80,7 +89,32 @@ return (() => {
     if (seen.has(key)) continue;
     seen.add(key);
     const text = (a.innerText || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120);
-    out.push({ href: key, text });
+    // Sentence-ish context: surrounding block text, clipped around the link
+    let context = '';
+    const block = a.closest('p, li, dd, td, th, blockquote, h1, h2, h3, h4, h5, h6') || a.parentElement;
+    if (block) {
+      const full = (block.innerText || block.textContent || '').trim().replace(/\s+/g, ' ');
+      if (full.length <= 280) {
+        context = full;
+      } else {
+        const needle = text || '';
+        const idx = needle ? full.indexOf(needle) : -1;
+        if (idx >= 0) {
+          const start = Math.max(0, idx - 100);
+          const end = Math.min(full.length, idx + needle.length + 140);
+          context = (start > 0 ? '…' : '') + full.slice(start, end) + (end < full.length ? '…' : '');
+        } else {
+          context = full.slice(0, 240) + (full.length > 240 ? '…' : '');
+        }
+      }
+    }
+    if (!context) context = text;
+    out.push({
+      href: key,
+      text,
+      context: context.slice(0, 280),
+      abs_y: rect.top + scrollY,
+    });
     if (out.length >= 80) break;
   }
   return out;
@@ -93,7 +127,6 @@ return (() => {
   const title = (h1 && (h1.innerText || h1.textContent) || document.title || '')
     .replace(/\s*-\s*Wikipedia.*$/i, '').trim();
   let extract = '';
-  // Vector 2022: paragraphs may not be direct children of .mw-parser-output
   const paras = document.querySelectorAll(
     '#mw-content-text .mw-parser-output p, #mw-content-text p'
   );
@@ -124,6 +157,11 @@ class WikiBrowser:
         self._page: ChromiumPage | None = None
         self._last_candidates: list[VisibleLink] = []
         self._translated = False
+        # Stable id assignment within a page visit (href -> id)
+        self._href_to_id: dict[str, str] = {}
+        self._next_id: int = 1
+        # Internal registry for memory recall (id -> VisibleLink-like data)
+        self._registry: dict[str, VisibleLink] = {}
 
     def _ensure(self) -> ChromiumPage:
         if self._page is not None:
@@ -186,6 +224,10 @@ class WikiBrowser:
     def open_article(self, title: str) -> None:
         page = self._ensure()
         self._translated = False
+        self._href_to_id.clear()
+        self._registry.clear()
+        self._next_id = 1
+        self._last_candidates = []
         page.get(self.wiki_url(title))
         self._wait_ready()
 
@@ -195,7 +237,6 @@ class WikiBrowser:
             page.wait.doc_loaded()
         except Exception:
             pass
-        # Wait until main content exists
         for _ in range(20):
             try:
                 ok = page.run_js(
@@ -225,8 +266,18 @@ class WikiBrowser:
             "url": meta.get("url") or page.url or "",
         }
 
+    def _stable_id(self, href: str) -> str:
+        if href in self._href_to_id:
+            return self._href_to_id[href]
+        lid = f"L{self._next_id:03d}"
+        self._next_id += 1
+        self._href_to_id[href] = lid
+        return lid
+
     def observe_links(self) -> list[VisibleLink]:
         page = self._ensure()
+        metrics = self.scroll_metrics()
+        scroll_y = float(metrics.get("y") or 0)
         try:
             raw = page.run_js(_VIEWPORT_LINKS_JS)
         except Exception:
@@ -234,7 +285,7 @@ class WikiBrowser:
         if not isinstance(raw, list):
             raw = []
         links: list[VisibleLink] = []
-        for i, item in enumerate(raw, start=1):
+        for item in raw:
             if not isinstance(item, dict):
                 continue
             href = item.get("href") or ""
@@ -242,20 +293,43 @@ class WikiBrowser:
             if not title:
                 continue
             text = (item.get("text") or title).strip() or title
-            lid = f"L{i:03d}"
-            links.append(VisibleLink(id=lid, title=title, href=href, text=text))
+            context = (item.get("context") or text).strip() or text
+            abs_y = float(item.get("abs_y") or scroll_y)
+            lid = self._stable_id(href)
+            vl = VisibleLink(
+                id=lid,
+                title=title,
+                href=href,
+                text=text,
+                context=context,
+                scroll_y=scroll_y,
+                abs_y=abs_y,
+            )
+            links.append(vl)
+            self._registry[lid] = vl
         self._last_candidates = links
         return links
 
+    def registry_get(self, link_id: str) -> VisibleLink | None:
+        return self._registry.get(link_id)
+
+    def link_in_viewport(self, link_id: str) -> bool:
+        return any(c.id == link_id for c in self._last_candidates)
+
     def click_link(self, link_id: str) -> VisibleLink | None:
-        """Click a candidate from the last observe. Returns the link or None if illegal."""
+        """Click a candidate currently in the viewport (or registered href)."""
         target = None
         for c in self._last_candidates:
             if c.id == link_id:
                 target = c
                 break
         if target is None:
+            target = self._registry.get(link_id)
+        if target is None:
             return None
+        return self._click_href(target)
+
+    def _click_href(self, target: VisibleLink) -> VisibleLink:
         page = self._ensure()
         href_js = target.href.replace("\\", "\\\\").replace("'", "\\'")
         clicked = page.run_js(
@@ -277,10 +351,54 @@ class WikiBrowser:
             page.get(target.href)
         self._wait_ready(0.5)
         self._translated = False
+        # New page: reset id registry
+        self._href_to_id.clear()
+        self._registry.clear()
+        self._next_id = 1
+        self._last_candidates = []
         return target
 
+    def scroll_toward_link(self, link_id: str) -> dict[str, float | bool | str]:
+        """One page-scroll toward a remembered link's abs_y. Counts as one scroll.
+
+        Returns metrics including whether the link is now in the viewport.
+        """
+        target = self._registry.get(link_id)
+        if target is None:
+            return {"changed": False, "in_viewport": False, "reason": "unknown_id"}
+        metrics = self.scroll_metrics()
+        cur_y = float(metrics["y"])
+        vh = 0.0
+        page = self._ensure()
+        try:
+            vh = float(
+                page.run_js(
+                    "return window.innerHeight || document.documentElement.clientHeight || 0"
+                )
+                or 0
+            )
+        except Exception:
+            vh = 900.0
+        target_y = float(target.abs_y)
+        # Aim so link is roughly in upper half of viewport
+        desired = max(0.0, target_y - vh * 0.25)
+        if abs(desired - cur_y) < 40:
+            # Already near; try a tiny nudge then re-observe
+            direction = "down" if desired >= cur_y else "up"
+            result = self.scroll(direction=direction, amount="half")
+        elif desired > cur_y:
+            result = self.scroll(direction="down", amount="page")
+        else:
+            result = self.scroll(direction="up", amount="page")
+        # Re-observe to refresh last_candidates
+        self.observe_links()
+        in_view = self.link_in_viewport(link_id)
+        result["in_viewport"] = in_view
+        result["desired_y"] = desired
+        return result
+
     def scroll_metrics(self) -> dict[str, float | bool]:
-        """Current scrollY and whether the viewport is at the bottom."""
+        """Current scrollY and whether the viewport is at top/bottom."""
         page = self._ensure()
         try:
             raw = page.run_js(
@@ -295,26 +413,24 @@ class WikiBrowser:
                   const maxY = Math.max(0, sh - h);
                   const at_bottom = y >= maxY - 2;
                   const at_top = y <= 2;
-                  return { y, maxY, at_bottom, at_top };
+                  return { y, maxY, at_bottom, at_top, vh: h };
                 })()
                 """
             )
         except Exception:
             raw = None
         if not isinstance(raw, dict):
-            return {"y": 0.0, "maxY": 0.0, "at_bottom": True, "at_top": True}
+            return {"y": 0.0, "maxY": 0.0, "at_bottom": True, "at_top": True, "vh": 900.0}
         return {
             "y": float(raw.get("y") or 0),
             "maxY": float(raw.get("maxY") or 0),
             "at_bottom": bool(raw.get("at_bottom")),
             "at_top": bool(raw.get("at_top")),
+            "vh": float(raw.get("vh") or 900),
         }
 
     def scroll(self, direction: str = "down", amount: str = "page") -> dict[str, float | bool]:
-        """Scroll the page. Returns metrics including whether position changed.
-
-        Pages have finite height; scrolling at the bottom/top is a no-op.
-        """
+        """Scroll the page. Returns metrics including whether position changed."""
         page = self._ensure()
         before = self.scroll_metrics()
         factor = 1.0 if amount == "page" else 0.5
@@ -341,11 +457,7 @@ class WikiBrowser:
         }
 
     def translate(self, target_lang: str) -> None:
-        """Pragmatic translate: Google Translate website wrapper of the current URL.
-
-        Documented choice (vs Wikipedia language links): keeps the same article
-        content in another language without switching wiki editions / link graphs.
-        """
+        """Optional: Google Translate website wrapper of the current URL."""
         page = self._ensure()
         current = page.url or ""
         if "translate.google.com" in current and "u=" in current:
@@ -358,6 +470,10 @@ class WikiBrowser:
         page.get(wrapped)
         self._wait_ready(1.0)
         self._translated = True
+        self._href_to_id.clear()
+        self._registry.clear()
+        self._next_id = 1
+        self._last_candidates = []
 
     @property
     def is_translated(self) -> bool:

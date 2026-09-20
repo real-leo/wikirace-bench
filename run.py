@@ -20,7 +20,7 @@ load_dotenv(ROOT / ".env")
 
 @click.group()
 def cli() -> None:
-    """Wikipedia WikiRace bench (DrissionPage viewport links)."""
+    """Wikipedia WikiRace bench (equal-cost scroll/click, viewport + memory)."""
 
 
 @cli.command()
@@ -38,7 +38,7 @@ def cli() -> None:
 @click.option("--headless/--headed", default=True, help="Chromium headless (default true)")
 @click.option(
     "--timeout",
-    default=120.0,
+    default=180.0,
     type=float,
     show_default=True,
     help="Wall-clock episode timeout in seconds (fail reason=timeout). 0=disable.",
@@ -67,13 +67,16 @@ def play(
     print(json.dumps({k: row[k] for k in row if k != "trace"}, ensure_ascii=False, indent=2))
     print("path:", " → ".join(row["path"]))
     print(
-        f"nav_steps={row.get('steps')} scrolls={row.get('scrolls')} "
-        f"seconds={row.get('seconds')}"
+        f"steps={row.get('steps')} clicks={row.get('clicks')} "
+        f"scrolls={row.get('scrolls')} seconds={row.get('seconds')}"
     )
     if row.get("trace"):
         print("actions:")
         for t in row["trace"]:
-            print(f"  step {t['step']}: {t.get('action')} -> {t.get('chosen_title')}")
+            print(
+                f"  step {t['step']}: {t.get('action')} -> {t.get('chosen_title')} "
+                f"(consumed={t.get('actions_consumed')})"
+            )
 
 
 @cli.command()
@@ -90,7 +93,7 @@ def play(
 )
 @click.option(
     "--timeout",
-    default=120.0,
+    default=180.0,
     type=float,
     show_default=True,
     help="Wall-clock episode timeout in seconds (fail reason=timeout). 0=disable.",
