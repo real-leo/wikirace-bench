@@ -88,7 +88,8 @@ class JevBrain(Brain):
             }
             for c in state.candidates
         }
-        # Fair eval: always include SCROLL_DOWN in browser mode (scrolling costs a step).
+        # Fair eval: always include SCROLL_DOWN in browser mode (scroll is free of
+        # the click/nav step budget; efficiency is wall-clock seconds).
         scroll_key = None
         if state.source in ("browser", "live_browser"):
             scroll_key = "SCROLL_DOWN"
@@ -96,7 +97,8 @@ class JevBrain(Brain):
                 "title": "(scroll down)",
                 "text": (
                     "Scroll one page down to reveal more article links. "
-                    "Prefer a bridge click when any visible link helps toward the goal."
+                    "Prefer a bridge click when any visible link helps toward the goal. "
+                    "Scroll does not consume the click step budget."
                 ),
                 "what": "Scroll down one page; do not click.",
                 "not_for": "Do not scroll when any visible link is a plausible bridge toward the goal.",
@@ -125,8 +127,10 @@ class JevBrain(Brain):
                         "focus": (
                             "Prefer a conceptual bridge click over scrolling. "
                             "Avoid backtracking to pages already in history unless stuck. "
-                            "SCROLL_DOWN is always available in browser mode and costs a step; "
-                            "choose it only when no visible link is a plausible bridge."
+                            "SCROLL_DOWN is always available in browser mode and does not "
+                            "consume the click step budget (max_steps counts clicks only); "
+                            "choose it when no visible link is a plausible bridge. "
+                            "Efficiency is wall-clock time, so avoid pointless scrolling."
                         ),
                         "goal_title": state.goal.title,
                     },
@@ -176,10 +180,12 @@ You must return ONE JSON action, nothing else.
 Actions:
 1. Click a visible link: {"action":"click","link_id":"L001"}
    - link_id MUST be one of the provided candidate ids. Inventing ids or titles fails the race.
+   - Clicks consume the step budget (max_steps).
 2. Scroll the page: {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
-   - Use when no good link is visible; scrolling consumes a step.
+   - Use when no good link is visible. Scroll does NOT consume max_steps (pages are finite height).
+   - Efficiency is wall-clock time — avoid endless scrolling at the bottom.
 3. Translate page: {"action":"translate","target_lang":"zh"}
-   - Optional; wraps current URL in Google Translate. Consumes a step.
+   - Optional; wraps current URL in Google Translate. Consumes a step like a click.
 
 Strategy: prefer clicks that bridge toward the goal; scroll to reveal more links; avoid loops.
 Never invent page titles. Never explain. JSON only."""

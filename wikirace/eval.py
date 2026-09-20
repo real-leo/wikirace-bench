@@ -46,24 +46,39 @@ def make_env(
     )
 
 
+def _episode_base(task: dict, brain: Brain) -> dict:
+    return {
+        "task_id": task.get("id"),
+        "brain": brain.name,
+        "start": task.get("start"),
+        "goal": task.get("goal"),
+        "source": task.get("source", "browser"),
+    }
+
+
 def run_episode(
     task: dict,
     brain: Brain,
     lang: str = "en",
     headless: bool = True,
+    timeout_s: float | None = 120.0,
 ) -> dict:
+    """Run one race.
+
+    Result fields:
+      steps   — click/translate (navigating) steps counted toward max_steps
+      scrolls — number of scroll actions (do not consume max_steps)
+      seconds — wall-clock from episode start to end (primary efficiency metric)
+    """
     try:
         env = make_env(task, lang=lang, headless=headless)
     except Exception as exc:
         return {
-            "task_id": task.get("id"),
-            "brain": brain.name,
-            "start": task.get("start"),
-            "goal": task.get("goal"),
-            "source": task.get("source", "browser"),
+            **_episode_base(task, brain),
             "status": "error",
             "reason": f"setup:{type(exc).__name__}: {exc}",
             "steps": 0,
+            "scrolls": 0,
             "path": [],
             "seconds": 0.0,
             "trace": [],
@@ -74,14 +89,13 @@ def run_episode(
         # Early success if already on goal
         if env._goal_reached(state.current.title):
             return {
-                "task_id": task.get("id"),
-                "brain": brain.name,
+                **_episode_base(task, brain),
                 "start": task["start"],
                 "goal": task["goal"],
-                "source": task.get("source", "browser"),
                 "status": "success",
                 "reason": "already_on_goal",
                 "steps": 0,
+                "scrolls": 0,
                 "path": env.path,
                 "seconds": 0.0,
                 "trace": [],
@@ -92,7 +106,31 @@ def run_episode(
         t0 = time.time()
         status = "running"
         reason = ""
+        max_seconds = timeout_s
+        if max_seconds is None and task.get("timeout_s") is not None:
+            max_seconds = float(task["timeout_s"])
+        elif max_seconds is None:
+            max_seconds = None
+        else:
+            max_seconds = float(max_seconds)
+
         while True:
+            if max_seconds is not None and (time.time() - t0) >= max_seconds:
+                status, reason = "fail", "timeout"
+                trace.append(
+                    {
+                        "step": state.step,
+                        "current": state.current.title,
+                        "n_candidates": len(state.candidates),
+                        "action": None,
+                        "chosen_title": None,
+                        "latency_ms": 0,
+                        "error": "timeout",
+                        "brain_debug_keys": [],
+                    }
+                )
+                break
+
             step_t0 = time.time()
             try:
                 action, debug = brain.choose(state)
@@ -123,20 +161,21 @@ def run_episode(
                     "latency_ms": int((time.time() - step_t0) * 1000),
                     "error": err,
                     "brain_debug_keys": list(debug.keys()),
+                    "scrolls_so_far": env.scroll_count,
+                    "nav_steps_so_far": env.step_count,
                 }
             )
             if status != "running":
                 break
             state = env.observe()
         return {
-            "task_id": task.get("id"),
-            "brain": brain.name,
+            **_episode_base(task, brain),
             "start": task["start"],
             "goal": task["goal"],
-            "source": task.get("source", "browser"),
             "status": status,
             "reason": reason,
             "steps": env.step_count,
+            "scrolls": env.scroll_count,
             "path": env.path,
             "seconds": round(time.time() - t0, 3),
             "trace": trace,
@@ -148,17 +187,28 @@ def run_episode(
 
 def summarize(rows: list[dict]) -> dict:
     n = len(rows)
-    wins = sum(1 for r in rows if r["status"] == "success")
+    wins = [r for r in rows if r["status"] == "success"]
+    n_wins = len(wins)
     illegal = sum(1 for r in rows if str(r.get("reason", "")).startswith("illegal_id"))
     return {
         "n": n,
-        "success": wins,
-        "success_rate": None if n == 0 else round(wins / n, 3),
+        "success": n_wins,
+        "success_rate": None if n == 0 else round(n_wins / n, 3),
         "illegal_id": illegal,
         "avg_steps_on_success": (
             None
-            if wins == 0
-            else round(sum(r["steps"] for r in rows if r["status"] == "success") / wins, 2)
+            if n_wins == 0
+            else round(sum(r["steps"] for r in wins) / n_wins, 2)
+        ),
+        "avg_scrolls_on_success": (
+            None
+            if n_wins == 0
+            else round(sum(int(r.get("scrolls") or 0) for r in wins) / n_wins, 2)
+        ),
+        "avg_seconds_on_success": (
+            None
+            if n_wins == 0
+            else round(sum(float(r.get("seconds") or 0) for r in wins) / n_wins, 3)
         ),
     }
 
@@ -169,18 +219,22 @@ def run_suite(
     out_path: Path,
     lang: str = "en",
     headless: bool = True,
+    timeout_s: float | None = 120.0,
 ) -> list[dict]:
     rows = []
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as fh:
         for task in tasks:
             for brain in brains:
-                row = run_episode(task, brain, lang=lang, headless=headless)
+                row = run_episode(
+                    task, brain, lang=lang, headless=headless, timeout_s=timeout_s
+                )
                 rows.append(row)
                 fh.write(json.dumps(row, ensure_ascii=False) + "\n")
                 fh.flush()
                 print(
                     f"{row['brain']:10} {row['task_id']} {row['status']:8} "
-                    f"steps={row['steps']} {row['reason']}"
+                    f"steps={row['steps']} scrolls={row.get('scrolls', 0)} "
+                    f"sec={row.get('seconds')} {row['reason']}"
                 )
     return rows

@@ -12,6 +12,10 @@ if TYPE_CHECKING:
 
 MAX_CANDIDATES = 255
 EXTRACT_CACHE_CHARS = 180
+# Consecutive no-op scrolls (already at bottom/top) before failing the episode.
+# Choice: fail with reason `scroll_noop_limit` rather than auto-hiding SCROLL_DOWN,
+# so Jev criteria can keep offering scroll fairly while still bounding stuck agents.
+SCROLL_NOOP_LIMIT = 3
 
 
 @dataclass
@@ -30,6 +34,10 @@ class RaceEnv:
 
     Primary mode: source=browser (DrissionPage, viewport-visible links).
     Offline: fixture / live MediaWiki API (full-page links, no scroll/translate).
+
+    Step budget (`max_steps`) counts only navigating actions: click and translate.
+    Scroll does not consume the step budget (pages have finite height); efficiency
+    is measured by wall-clock seconds. Scrolls are still recorded in the trace.
     """
 
     start: str
@@ -41,7 +49,9 @@ class RaceEnv:
     lang: str = "en"
     current: str = ""
     path: list[str] = field(default_factory=list)
-    step_count: int = 0
+    step_count: int = 0  # click / translate (nav) steps only
+    scroll_count: int = 0
+    scroll_noop_streak: int = 0
     extracts: dict[str, str] = field(default_factory=dict)
     link_cache: dict[str, list[str]] = field(default_factory=dict)
     _last_state: RaceState | None = None
@@ -57,6 +67,8 @@ class RaceEnv:
         self.current = self.start
         self.path = [self.start]
         self.step_count = 0
+        self.scroll_count = 0
+        self.scroll_noop_streak = 0
         self._last_state = None
         if self.is_browser:
             assert self.browser is not None
@@ -154,7 +166,11 @@ class RaceEnv:
         return state
 
     def step(self, action_raw: Action | dict | str) -> StepResult:
-        """Apply one action. Illegal click = fail. Scroll/translate consume a step."""
+        """Apply one action.
+
+        Click / translate consume one step toward max_steps.
+        Scroll does not; it is recorded via scroll_count / trace only.
+        """
         # Legacy: bare link_id string
         if isinstance(action_raw, str):
             action_raw = {"action": "click", "link_id": action_raw}
@@ -175,8 +191,8 @@ class RaceEnv:
             return self._step_translate(action)
         return StepResult(False, None, f"unknown_action:{action.action}", failed=True)
 
-    def _bump_step(self) -> bool:
-        """Increment step; return True if max_steps exhausted."""
+    def _bump_nav_step(self) -> bool:
+        """Increment navigating step counter; return True if max_steps exhausted."""
         self.step_count += 1
         return self.step_count >= self.max_steps
 
@@ -203,7 +219,8 @@ class RaceEnv:
 
         self.current = title
         self.path.append(title)
-        exhausted = self._bump_step()
+        self.scroll_noop_streak = 0  # new page resets bottom-stuck streak
+        exhausted = self._bump_nav_step()
 
         if self._goal_reached(title):
             return StepResult(True, title, "reached_goal", done=True, action="click")
@@ -218,15 +235,34 @@ class RaceEnv:
             return StepResult(
                 False, None, f"bad_direction:{direction}", failed=True, action="scroll"
             )
+
+        self.scroll_count += 1
+        changed = True
         if self.is_browser:
             assert self.browser is not None
-            self.browser.scroll(direction=direction, amount=amount or "page")
-        # Offline: scroll is a no-op on link set but still consumes a step
-        exhausted = self._bump_step()
-        if exhausted:
+            metrics = self.browser.scroll(direction=direction, amount=amount or "page")
+            changed = bool(metrics.get("changed", True))
+        # Offline: scroll is a recorded no-op on the link set (no viewport).
+
+        if not changed:
+            self.scroll_noop_streak += 1
+            if self.scroll_noop_streak >= SCROLL_NOOP_LIMIT:
+                return StepResult(
+                    True,
+                    self.current,
+                    "scroll_noop_limit",
+                    failed=True,
+                    action="scroll",
+                )
             return StepResult(
-                True, self.current, "max_steps", failed=True, action="scroll"
+                True,
+                self.current,
+                f"scrolled_{direction}_noop",
+                action="scroll",
             )
+
+        self.scroll_noop_streak = 0
+        # Scroll never fails via max_steps.
         return StepResult(True, self.current, f"scrolled_{direction}", action="scroll")
 
     def _step_translate(self, action: Action) -> StepResult:
@@ -238,7 +274,8 @@ class RaceEnv:
         if self.is_browser:
             assert self.browser is not None
             self.browser.translate(target)
-        exhausted = self._bump_step()
+        self.scroll_noop_streak = 0
+        exhausted = self._bump_nav_step()
         if exhausted:
             return StepResult(
                 True, self.current, "max_steps", failed=True, action="translate"

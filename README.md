@@ -7,8 +7,9 @@
 1. 用 DrissionPage 打开 `https://{lang}.wikipedia.org/wiki/{title}`
 2. 用 JS（`getBoundingClientRect` vs viewport）在 `#mw-content-text` / `#bodyContent` 内抽取**视口可见**文章链接
 3. 大脑根据 `RaceState` 返回一个 JSON action：`click` / `scroll` / `translate`
-4. 非法 `link_id` → 本局失败；`scroll` / `translate` 也消耗一步
-5. 到达目标页（规范化标题匹配）→ success
+4. 非法 `link_id` → 本局失败；**仅 `click` / `translate`（导航动作）消耗 `max_steps`**
+5. `scroll` **不计入**步数预算（页面高度有限，自然有界）；效率主指标为墙钟秒数 `seconds`
+6. 到达目标页（规范化标题匹配）→ success
 
 **主模式：`--source browser`（默认）**。`fixture` 离线图与 `live` MediaWiki API 仍可用作对照，但新设计以浏览器视口为准。
 
@@ -104,11 +105,15 @@ PYTHONPATH=. python run.py bench --brains overlap,jev,claude,gpt,deepseek --sour
 {"action": "translate", "target_lang": "zh"}
 ```
 
-| 动作 | 效果 | 耗步 |
-|------|------|------|
+| 动作 | 效果 | 计入 `max_steps` |
+|------|------|------------------|
 | `click` | 点击视口候选；非法 id → fail | 是 |
-| `scroll` | 上/下滚一页或半页，刷新可见链接 | 是 |
+| `scroll` | 上/下滚一页或半页，刷新可见链接；不耗步 | **否**（仍记入 `scrolls` / trace） |
 | `translate` | 用 Google Translate 网页包装当前 URL（`translate.google.com/translate?sl=auto&tl={lang}&u={url}`） | 是 |
+
+**效率**：墙钟时间 `seconds`（episode 起止）。`max_steps` 只限制点击/翻译次数。  
+**卡底安全**：连续 3 次滚动位置不变（已在页底/顶）→ 失败 `scroll_noop_limit`。  
+**超时**：CLI `--timeout` 默认 120s → 失败 `timeout`（`--timeout 0` 关闭）。
 
 **翻译策略说明**：选用 Google Translate website wrapper，而不是 Wikipedia 语言版跳转——这样仍是同一篇文章的内容翻译，不切换语言版的链接图。若需改成「点语言链接换 `zh.wikipedia.org`」，可在 `WikiBrowser.translate` 替换实现。
 
@@ -121,7 +126,7 @@ PYTHONPATH=. python run.py bench --brains overlap,jev,claude,gpt,deepseek --sour
 | `overlap` | 启发式：优先点与 goal 词重叠高的链接；重叠过低则 `scroll down` |
 | `gpt` / `deepseek` | OpenAI 兼容 Chat Completions，返回新 action JSON |
 | `claude` | Anthropic Messages API |
-| `jev` | Typesafe Choice（候选 + 可选 SCROLL_DOWN） |
+| `jev` | Typesafe Choice（候选 + **始终**提供 SCROLL_DOWN；滚动不计点击步数） |
 
 ## CLI 要点
 
@@ -132,7 +137,10 @@ run.py play|bench
   --headless / --headed     # 默认 headless=true
   --brain / --brains
   --start --goal --max-steps
+  --timeout 120            # 墙钟超时秒；0=关闭
 ```
+
+局结果字段：`steps`（点击/翻译步）、`scrolls`（滚动次数）、`seconds`（墙钟秒）。
 
 ## 百度百科
 

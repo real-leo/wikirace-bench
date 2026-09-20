@@ -279,8 +279,44 @@ class WikiBrowser:
         self._translated = False
         return target
 
-    def scroll(self, direction: str = "down", amount: str = "page") -> None:
+    def scroll_metrics(self) -> dict[str, float | bool]:
+        """Current scrollY and whether the viewport is at the bottom."""
         page = self._ensure()
+        try:
+            raw = page.run_js(
+                """
+                return (() => {
+                  const y = window.scrollY || window.pageYOffset || 0;
+                  const h = window.innerHeight || document.documentElement.clientHeight || 0;
+                  const sh = Math.max(
+                    document.documentElement.scrollHeight || 0,
+                    document.body ? document.body.scrollHeight : 0
+                  );
+                  const maxY = Math.max(0, sh - h);
+                  const at_bottom = y >= maxY - 2;
+                  const at_top = y <= 2;
+                  return { y, maxY, at_bottom, at_top };
+                })()
+                """
+            )
+        except Exception:
+            raw = None
+        if not isinstance(raw, dict):
+            return {"y": 0.0, "maxY": 0.0, "at_bottom": True, "at_top": True}
+        return {
+            "y": float(raw.get("y") or 0),
+            "maxY": float(raw.get("maxY") or 0),
+            "at_bottom": bool(raw.get("at_bottom")),
+            "at_top": bool(raw.get("at_top")),
+        }
+
+    def scroll(self, direction: str = "down", amount: str = "page") -> dict[str, float | bool]:
+        """Scroll the page. Returns metrics including whether position changed.
+
+        Pages have finite height; scrolling at the bottom/top is a no-op.
+        """
+        page = self._ensure()
+        before = self.scroll_metrics()
         factor = 1.0 if amount == "page" else 0.5
         sign = 1 if direction == "down" else -1
         page.run_js(
@@ -293,6 +329,16 @@ class WikiBrowser:
             """
         )
         time.sleep(0.3)
+        after = self.scroll_metrics()
+        changed = abs(float(after["y"]) - float(before["y"])) > 1.0
+        return {
+            "y_before": before["y"],
+            "y_after": after["y"],
+            "maxY": after["maxY"],
+            "changed": changed,
+            "at_bottom": after["at_bottom"],
+            "at_top": after["at_top"],
+        }
 
     def translate(self, target_lang: str) -> None:
         """Pragmatic translate: Google Translate website wrapper of the current URL.
