@@ -1,0 +1,114 @@
+{
+  "Coffee": {
+    "extract": "A brewed drink from roasted coffee beans. Grown widely in the tropics; associated with cafés, caffeine, and breakfast.",
+    "links": ["Caffeine", "Ethiopia", "Breakfast", "Stimulant", "Brazil"]
+  },
+  "Caffeine": {
+    "extract": "A central nervous system stimulant of the methylxanthine class. Found in coffee, tea, and some soft drinks.",
+    "links": ["Coffee", "Stimulant", "Nervous system", "Tea", "Pharmacology"]
+  },
+  "Ethiopia": {
+    "extract": "A country in the Horn of Africa. Often cited in stories about the origin of coffee cultivation.",
+    "links": ["Coffee", "Africa", "Arabian Peninsula"]
+  },
+  "Breakfast": {
+    "extract": "The first meal of the day. Coffee is a common breakfast drink in many countries.",
+    "links": ["Coffee", "Tea"]
+  },
+  "Stimulant": {
+    "extract": "A class of drugs that increase activity in the brain and body. Includes caffeine and some medicines.",
+    "links": ["Caffeine", "Nervous system", "Pharmacology", "NASA"]
+  },
+  "Brazil": {
+    "extract": "The largest country in South America and a major coffee exporter.",
+    "links": ["Coffee", "South America"]
+  },
+  "Tea": {
+    "extract": "A drink made from Camellia sinensis leaves. Also contains caffeine.",
+    "links": ["Caffeine", "China", "Breakfast"]
+  },
+  "Nervous system": {
+    "extract": "The network of nerve cells that transmits signals in the body. Stimulants act on this system.",
+    "links": ["Stimulant", "Pharmacology", "Human body", "Sleep"]
+  },
+  "Pharmacology": {
+    "extract": "The study of how chemical substances affect living organisms. Includes stimulants and anesthetics.",
+    "links": ["Caffeine", "Stimulant", "Medicine", "NASA"]
+  },
+  "Africa": {
+    "extract": "A continent. Home to Ethiopia and many other coffee-growing regions.",
+    "links": ["Ethiopia", "Arabian Peninsula"]
+  },
+  "Arabian Peninsula": {
+    "extract": "A peninsula in West Asia. Coffee drinking spread through the region in the early modern period.",
+    "links": ["Ethiopia", "Trade", "Ottoman Empire"]
+  },
+  "South America": {
+    "extract": "A continent that includes Brazil, Colombia, and other coffee producers.",
+    "links": ["Brazil", "Trade"]
+  },
+  "China": {
+    "extract": "A country in East Asia. Associated with tea more than coffee.",
+    "links": ["Tea", "Trade"]
+  },
+  "NASA": {
+    "extract": "The United States civil space agency. Ran the Apollo program that landed people on the Moon.",
+    "links": ["Apollo program", "Moon", "United States", "Engineering"]
+  },
+  "Medicine": {
+    "extract": "The practice of diagnosing and treating disease. Overlaps with pharmacology.",
+    "links": ["Pharmacology", "Human body"]
+  },
+  "Human body": {
+    "extract": "The physical structure of a human being, including the nervous system.",
+    "links": ["Nervous system", "Sleep", "Medicine"]
+  },
+  "Sleep": {
+    "extract": "A recurring state of rest. Caffeine is used to postpone it.",
+    "links": ["Nervous system", "Caffeine"]
+  },
+  "Trade": {
+    "extract": "The exchange of goods. Coffee and tea were important early modern commodities.",
+    "links": ["Arabian Peninsula", "Ottoman Empire", "United States"]
+  },
+  "Ottoman Empire": {
+    "extract": "An empire based in Anatolia. Coffeehouses were a prominent urban institution.",
+    "links": ["Arabian Peninsula", "Trade", "Europe"]
+  },
+  "Europe": {
+    "extract": "A continent. Coffee reached European ports via Mediterranean trade.",
+    "links": ["Ottoman Empire", "United States"]
+  },
+  "United States": {
+    "extract": "A country in North America. Created NASA and funded Apollo.",
+    "links": ["NASA", "Apollo program", "Engineering", "Cold War"]
+  },
+  "Engineering": {
+    "extract": "The application of science to design. Spacecraft are engineered systems.",
+    "links": ["NASA", "Apollo program", "Moon"]
+  },
+  "Cold War": {
+    "extract": "A geopolitical rivalry after World War II. The space race was one theatre.",
+    "links": ["United States", "Apollo program", "Moon"]
+  },
+  "Apollo program": {
+    "extract": "NASA program that landed humans on the Moon. Apollo 11 was the first landing.",
+    "links": ["NASA", "Apollo 11", "Moon", "Neil Armstrong"]
+  },
+  "Moon": {
+    "extract": "Earth's only natural satellite. Site of the Apollo landings.",
+    "links": ["Apollo program", "Apollo 11", "Earth"]
+  },
+  "Neil Armstrong": {
+    "extract": "American astronaut. First person to walk on the Moon, on Apollo 11.",
+    "links": ["Apollo 11", "Apollo program", "United States"]
+  },
+  "Earth": {
+    "extract": "The planet we live on. The Moon orbits Earth.",
+    "links": ["Moon", "United States"]
+  },
+  "Apollo 11": {
+    "extract": "The 1969 NASA mission that first landed humans on the Moon. Crew included Neil Armstrong.",
+    "links": ["Apollo program", "Moon", "Neil Armstrong", "NASA"]
+  }
+}

@@ -1,0 +1,6 @@
+[
+  {"id": "fx-01", "source": "fixture", "start": "Coffee", "goal": "Apollo 11", "max_steps": 12},
+  {"id": "fx-02", "source": "fixture", "start": "Tea", "goal": "Neil Armstrong", "max_steps": 12},
+  {"id": "br-01", "source": "browser", "start": "Coffee", "goal": "Caffeine", "max_steps": 8},
+  {"id": "br-02", "source": "browser", "start": "Rubber duck", "goal": "Bathing", "max_steps": 10}
+]
