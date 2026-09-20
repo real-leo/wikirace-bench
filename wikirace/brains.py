@@ -84,8 +84,8 @@ class OverlapBrain(Brain):
 class JevBrain(Brain):
     """Typesafe Choice over offered link ids + SCROLL_DOWN/UP when physically allowed.
 
-    The MODEL decides scroll vs click. No Noul gate. Scroll and click each cost
-    one step toward max_steps.
+    The MODEL decides scroll vs click. No Noul gate. Scroll and click each count
+    equally in step metrics (no hard max_steps fail).
     """
 
     name = "jev"
@@ -144,7 +144,14 @@ class JevBrain(Brain):
             action = Action(action="scroll", direction="down", amount="page")
             return action, {"policy": "jev_stuck_empty"}
 
-        remaining = state.action.remaining_steps
+        unlimited = state.action.max_steps <= 0
+        remaining = None if unlimited else state.action.remaining_steps
+        remaining_msg = (
+            "No hard step limit — minimize total actions; at page bottom "
+            "SCROLL_DOWN is unavailable so you must click or scroll up."
+            if unlimited
+            else f"Soft remaining steps (info only, not a hard fail): {remaining}."
+        )
         payload = {
             "model": self.model,
             "state": {
@@ -176,8 +183,8 @@ class JevBrain(Brain):
                             "total actions."
                         ),
                         "focus": (
-                            "Scroll and click each cost one step; minimize total "
-                            "actions to reach the goal. "
+                            "Scroll and click each count as one action; minimize "
+                            "total actions to reach the goal. "
                             "A current best candidate need not match the goal "
                             "directly — a reasonable conceptual bridge is enough. "
                             "Only scroll if you expect clearly more valuable "
@@ -186,7 +193,8 @@ class JevBrain(Brain):
                             "waiting for a near-synonym with the goal. "
                             "Avoid backtracking to pages already on the path "
                             "unless stuck. "
-                            f"Remaining steps: {remaining}."
+                            "Do not oscillate scroll up/down without clicking. "
+                            + remaining_msg
                         ),
                         "goal_title": state.goal.title,
                     },
@@ -242,20 +250,21 @@ class JevBrain(Brain):
 
 LLM_SYSTEM = """You are a WikiRace agent controlling a live Wikipedia browser.
 Each step you see: goal, current viewport links (with sentence context), candidate
-memory (union of current + previous screen), and action state (path, steps left,
-can_scroll_down / can_scroll_up).
+memory (union of current + previous screen), and action state (path, step counts,
+can_scroll_down / can_scroll_up). max_steps/remaining_steps are soft info only
+(0/null = unlimited); episodes do not fail on step count.
 
 You must return ONE JSON action, nothing else.
 
-Actions (EQUAL COST — each consumes one step toward max_steps):
+Actions (EQUAL COST — each counts as one step in metrics):
 1. Click an offered link: {"action":"click","link_id":"L001"}
    - link_id MUST be in viewport ∪ memory ids. Inventing ids fails the race.
    - Clicking a remembered off-screen link makes the executor scroll back first;
-     those recovery scrolls also cost steps.
+     those recovery scrolls also count as steps.
 2. Scroll: {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
    - Only when can_scroll_down / can_scroll_up is true (bottom drops SCROLL_DOWN;
-     top drops SCROLL_UP).
-3. Translate (optional): {"action":"translate","target_lang":"zh"} — also costs one step.
+     top drops SCROLL_UP). Do not oscillate up/down without clicking.
+3. Translate (optional): {"action":"translate","target_lang":"zh"} — also one step.
 
 Strategy:
 - Minimize total actions to reach the goal.

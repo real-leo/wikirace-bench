@@ -33,8 +33,10 @@ class PageRef(BaseModel):
 class ActionState(BaseModel):
     path: list[str] = Field(default_factory=list)
     step: int = 0
-    max_steps: int = 12
-    remaining_steps: int = 12
+    # 0 = unlimited (soft info only; never terminates the episode)
+    max_steps: int = 0
+    # None when unlimited; otherwise soft remaining for the model
+    remaining_steps: int | None = None
     can_scroll_down: bool = True
     can_scroll_up: bool = False
 
@@ -59,7 +61,7 @@ class RaceState(BaseModel):
     # Convenience mirrors (also in action) for older brains / dumps
     history: list[str] = Field(default_factory=list)
     step: int = 0
-    max_steps: int = 12
+    max_steps: int = 0  # 0 = unlimited
     candidates: list[Candidate] = Field(default_factory=list)  # = offered set
 
     def offered_ids(self) -> set[str]:
@@ -108,7 +110,18 @@ class RaceState(BaseModel):
                 }
                 for c in self.memory
             ],
-            "action": self.action.model_dump(),
+            "action": {
+                "path": self.action.path,
+                "step": self.action.step,
+                "max_steps": self.action.max_steps,
+                "remaining_steps": (
+                    None
+                    if self.action.max_steps <= 0
+                    else self.action.remaining_steps
+                ),
+                "can_scroll_down": self.action.can_scroll_down,
+                "can_scroll_up": self.action.can_scroll_up,
+            },
             "source": self.source,
         }
 

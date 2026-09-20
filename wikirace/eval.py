@@ -40,7 +40,7 @@ def make_env(
         browser=browser,
         start=task["start"],
         goal=task["goal"],
-        max_steps=int(task.get("max_steps", 12)),
+        max_steps=int(task.get("max_steps", 0)),
         source=source,
         lang=lang,
     )
@@ -131,11 +131,6 @@ def run_episode(
                         "brain_debug_keys": [],
                     }
                 )
-                break
-
-            # Exhausted budget with no action left
-            if state.action.remaining_steps <= 0:
-                status, reason = "fail", "max_steps"
                 break
 
             step_t0 = time.time()

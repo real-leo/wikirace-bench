@@ -14,6 +14,8 @@ MAX_CANDIDATES = 255
 EXTRACT_CACHE_CHARS = 180
 # Recovery scrolls when clicking an off-screen memory link (cap per click).
 MAX_RECOVERY_SCROLLS = 20
+# Consecutive alternating up/down scrolls with no click → fail (nice-to-have).
+SCROLL_OSCILLATION_LIMIT = 12
 
 
 @dataclass
@@ -36,15 +38,18 @@ class RaceEnv:
     Primary mode: source=browser (DrissionPage, viewport-visible links).
     Offline: fixture / live MediaWiki API (full-page links, no real scroll).
 
-    Every action (click, scroll, translate) costs one step toward max_steps.
+    Every action (click, scroll, translate) counts equally in metrics (steps).
+    Episodes do NOT fail on step count — termination is goal / illegal action /
+    wall-clock timeout / optional scroll oscillation. max_steps is soft info
+    only (0 = unlimited in observation).
     Clicking a remembered off-screen link auto-scrolls toward it; each recovery
-    scroll also costs one step, then the click costs one more.
+    scroll also counts as one step, then the click costs one more.
     At page bottom SCROLL_DOWN is not offered; at top SCROLL_UP is not offered.
     """
 
     start: str
     goal: str
-    max_steps: int = 12
+    max_steps: int = 0  # 0 = unlimited (soft info only; never a fail condition)
     source: str = "browser"
     wiki: WikiSource | None = None
     browser: WikiBrowser | None = None
@@ -60,6 +65,8 @@ class RaceEnv:
     # Previous viewport candidates (public Candidate list) for memory union
     _prev_viewport: list[Candidate] = field(default_factory=list)
     _curr_viewport: list[Candidate] = field(default_factory=list)
+    # Model scroll directions since last click (for oscillation detection)
+    _scroll_dirs: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.reset()
@@ -77,6 +84,7 @@ class RaceEnv:
         self._last_state = None
         self._prev_viewport = []
         self._curr_viewport = []
+        self._scroll_dirs = []
         if self.is_browser:
             assert self.browser is not None
             self.browser.open_article(self.start)
@@ -144,7 +152,10 @@ class RaceEnv:
 
     def observe(self) -> RaceState:
         can_down, can_up = self._scroll_flags()
-        remaining = max(0, self.max_steps - self.step_count)
+        if self.max_steps <= 0:
+            remaining: int | None = None
+        else:
+            remaining = max(0, self.max_steps - self.step_count)
 
         if self.is_browser:
             assert self.browser is not None
@@ -251,13 +262,12 @@ class RaceEnv:
         """After a scroll, current becomes previous for the next observe."""
         self._prev_viewport = list(self._curr_viewport)
 
-    def _bump(self, n: int = 1) -> bool:
-        """Consume n actions; return True if max_steps exhausted."""
+    def _bump(self, n: int = 1) -> None:
+        """Consume n actions for equal-cost metrics (never a fail condition)."""
         self.step_count += n
-        return self.step_count >= self.max_steps
 
     def step(self, action_raw: Action | dict | str) -> StepResult:
-        """Apply one brain action. Scroll and click each cost ≥1 toward max_steps."""
+        """Apply one brain action. Scroll and click each count ≥1 in step metrics."""
         if isinstance(action_raw, str):
             action_raw = parse_action(action_raw)
         try:
@@ -289,12 +299,11 @@ class RaceEnv:
         if self.is_browser:
             assert self.browser is not None
             # If remembered but not currently visible, auto-scroll toward it
-            # (each recovery scroll costs one step), then click.
+            # (each recovery scroll counts as one step), then click.
             if not self.browser.link_in_viewport(link_id):
                 while (
                     not self.browser.link_in_viewport(link_id)
                     and recovery < MAX_RECOVERY_SCROLLS
-                    and self.step_count + recovery < self.max_steps
                 ):
                     metrics = self.browser.scroll_toward_link(link_id)
                     recovery += 1
@@ -305,18 +314,6 @@ class RaceEnv:
                     if metrics.get("in_viewport"):
                         break
                 self.step_count += recovery
-                if self.step_count >= self.max_steps and not self.browser.link_in_viewport(
-                    link_id
-                ):
-                    return StepResult(
-                        True,
-                        self.current,
-                        "max_steps",
-                        failed=True,
-                        action="click",
-                        actions_consumed=recovery,
-                        recovery_scrolls=recovery,
-                    )
                 if not self.browser.link_in_viewport(link_id):
                     # Fall through: try click via registry href / navigate
                     pass
@@ -344,7 +341,8 @@ class RaceEnv:
         self.current = title
         self.path.append(title)
         self.click_count += 1
-        exhausted = self._bump(1)
+        self._scroll_dirs = []  # click breaks scroll oscillation streak
+        self._bump(1)
 
         if self._goal_reached(title):
             return StepResult(
@@ -352,16 +350,6 @@ class RaceEnv:
                 title,
                 "reached_goal",
                 done=True,
-                action="click",
-                actions_consumed=recovery + 1,
-                recovery_scrolls=recovery,
-            )
-        if exhausted:
-            return StepResult(
-                True,
-                title,
-                "max_steps",
-                failed=True,
                 action="click",
                 actions_consumed=recovery + 1,
                 recovery_scrolls=recovery,
@@ -409,18 +397,27 @@ class RaceEnv:
             self.browser.scroll(direction=direction, amount=amount or "page")
 
         self.scroll_count += 1
-        exhausted = self._bump(1)
-        if exhausted:
+        self._bump(1)
+        self._scroll_dirs.append(direction)
+        if self._is_scroll_oscillating():
             return StepResult(
                 True,
                 self.current,
-                "max_steps",
+                "scroll_oscillation",
                 failed=True,
                 action="scroll",
             )
         return StepResult(
             True, self.current, f"scrolled_{direction}", action="scroll"
         )
+
+    def _is_scroll_oscillating(self) -> bool:
+        """Fail if many consecutive model scrolls strictly alternate up/down."""
+        dirs = self._scroll_dirs
+        if len(dirs) < SCROLL_OSCILLATION_LIMIT:
+            return False
+        window = dirs[-SCROLL_OSCILLATION_LIMIT:]
+        return all(window[i] != window[i + 1] for i in range(len(window) - 1))
 
     def _step_translate(self, action: Action) -> StepResult:
         target = (action.target_lang or "").strip()
@@ -433,11 +430,8 @@ class RaceEnv:
             self.browser.translate(target)
         self._prev_viewport = []
         self._curr_viewport = []
-        exhausted = self._bump(1)
-        if exhausted:
-            return StepResult(
-                True, self.current, "max_steps", failed=True, action="translate"
-            )
+        self._scroll_dirs = []
+        self._bump(1)
         return StepResult(
             True, self.current, f"translated:{target}", action="translate"
         )

@@ -4,7 +4,7 @@ Viewport Wikipedia WikiRace eval. Measures whether a model can decide **when inf
 
 ## Eval goal
 
-Minimize total actions to reach the goal article. Scroll and click are **equal cost**: each consumes one step toward `max_steps`.
+Minimize total actions to reach the goal article. Scroll and click are **equal cost** in metrics (`steps` / `clicks` / `scrolls` / `seconds`). Episodes do **not** fail on step count: `--max-steps 0` (default) means unlimited; a positive value is soft info in the observation only (`remaining_steps`).
 
 ## Observation (each step)
 
@@ -13,7 +13,7 @@ The brain receives:
 1. **Goal**: `title` + short `description`
 2. **Current viewport**: visible article links in **main content only** (deduped; nav / sidebar / footer / infobox / references excluded). Each candidate: `id`, `title`, short **sentence context** around the link (not bare URL; not a full-page dump). Real `href` stays in the executor only.
 3. **Candidate memory (v1)**: union of links from **current screen + previous screen** (cap only if needed; prefer keeping both). Each entry includes a rough position hint (`current_viewport|scrollY=…` or `prev_viewport`).
-4. **Action state**: `path`, `step`, `max_steps`, `remaining_steps`, `can_scroll_down`, `can_scroll_up`
+4. **Action state**: `path`, `step`, `max_steps` (0=unlimited), `remaining_steps` (null when unlimited), `can_scroll_down`, `can_scroll_up`
 
 Offered click ids = viewport ∪ memory.
 
@@ -32,8 +32,8 @@ Example (abridged):
   "action": {
     "path": ["Coffee"],
     "step": 0,
-    "max_steps": 12,
-    "remaining_steps": 12,
+    "max_steps": 0,
+    "remaining_steps": null,
     "can_scroll_down": true,
     "can_scroll_up": false
   }
@@ -50,11 +50,11 @@ Example (abridged):
 
 Rules:
 
-- `max_steps` applies to **total actions** (clicks + scrolls + recovery scrolls + translate).
-- At **page bottom**: do not offer `SCROLL_DOWN` (`can_scroll_down=false`). Clicks + `SCROLL_UP` remain if allowed.
+- Equal-cost **accounting** only: clicks + scrolls + recovery scrolls + translate all increment `steps` for reporting — they do **not** stop the episode.
+- At **page bottom**: do not offer `SCROLL_DOWN` (`can_scroll_down=false`). Clicks + `SCROLL_UP` remain if allowed — this is the pressure to decide.
 - At **page top**: do not offer `SCROLL_UP`.
-- **Off-screen memory click**: if the model picks a remembered link not in the current viewport, the executor **auto-scrolls toward the remembered position**. **Each recovery scroll counts as one step**, then the click costs one more. If `max_steps` is exhausted during recovery, the episode fails with `max_steps`.
-- Wall-clock `--timeout` (default 180s) remains a safety fail (`reason=timeout`). There is **no** `scroll_noop_limit`; the bottom simply drops `SCROLL_DOWN`.
+- **Off-screen memory click**: if the model picks a remembered link not in the current viewport, the executor **auto-scrolls toward the remembered position**. **Each recovery scroll counts as one step**, then the click costs one more.
+- **Termination**: (1) reached goal → success; (2) illegal action → fail; (3) wall-clock `--timeout` (default 180s, use 300s for hard races) → `reason=timeout`; (4) optional futile scroll oscillation (many consecutive alternating up/down with no click) → `reason=scroll_oscillation`. There is **no** `max_steps` fail and **no** `scroll_noop_limit`.
 
 ```json
 {"action": "click", "link_id": "L001"}
@@ -105,17 +105,17 @@ Needs Chromium/Chrome. Headless default; use `--headed` to watch. CI / sandbox u
 # Overlap heuristic
 PYTHONPATH=. python run.py play \
   --brain overlap --source browser --lang en \
-  --start Coffee --goal Caffeine --max-steps 12
+  --start Coffee --goal Caffeine
 
 # Jev (TypeSafe Choice)
 PYTHONPATH=. python run.py play \
   --brain jev --source browser \
-  --start "Rubber duck" --goal Bathing --max-steps 12
+  --start "Rubber duck" --goal Bathing --timeout 180
 
-# Longer path (often mixes scrolls + clicks)
+# Harder race (higher wall-clock safety timeout)
 PYTHONPATH=. python run.py play \
   --brain jev --source browser \
-  --start Tea --goal Moon --max-steps 20 --timeout 300
+  --start Tea --goal Moon --timeout 300
 ```
 
 Batch:
@@ -132,7 +132,7 @@ run.py play|bench
   --lang en
   --headless / --headed
   --brain / --brains
-  --start --goal --max-steps
+  --start --goal --max-steps 0
   --timeout 180
 ```
 

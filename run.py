@@ -33,7 +33,13 @@ def cli() -> None:
     type=click.Choice(["browser", "fixture", "live"]),
     help="browser=DrissionPage (primary); fixture=offline; live=MediaWiki API",
 )
-@click.option("--max-steps", default=12, type=int)
+@click.option(
+    "--max-steps",
+    default=0,
+    type=int,
+    show_default=True,
+    help="Soft step budget shown in observation only (0=unlimited). Never fails the episode.",
+)
 @click.option("--lang", default="en", help="Wikipedia language code")
 @click.option("--headless/--headed", default=True, help="Chromium headless (default true)")
 @click.option(
