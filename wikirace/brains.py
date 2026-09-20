@@ -63,18 +63,15 @@ class OverlapBrain(Brain):
 
 
 class JevBrain(Brain):
-    """Typesafe Jev Choice over click candidates; may also scroll if empty."""
+    """Typesafe Jev Choice over click candidates; SCROLL_DOWN always offered in browser."""
 
     name = "jev"
-    # Offer SCROLL_DOWN only when the viewport is sparse (code owns workflow).
-    _SCROLL_IF_FEWER_THAN = 10
-    # After this many consecutive scrolls, force a click among visible links.
-    _MAX_SCROLL_STREAK = 2
 
     def __init__(self, model: str = "jev-latest") -> None:
         self.model = model
         self.api_key = os.environ["TYPESAFE_API_KEY"]
         self.base = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
+        # Debug-only counter; does not gate SCROLL_DOWN availability.
         self._scroll_streak = 0
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
@@ -91,18 +88,16 @@ class JevBrain(Brain):
             }
             for c in state.candidates
         }
-        # Include scroll as a synthetic option only when sparse / allowed to scroll.
+        # Fair eval: always include SCROLL_DOWN in browser mode (scrolling costs a step).
         scroll_key = None
-        allow_scroll = (
-            state.source in ("browser", "live_browser")
-            and len(state.candidates) < self._SCROLL_IF_FEWER_THAN
-            and self._scroll_streak < self._MAX_SCROLL_STREAK
-        )
-        if allow_scroll:
+        if state.source in ("browser", "live_browser"):
             scroll_key = "SCROLL_DOWN"
             criteria[scroll_key] = {
                 "title": "(scroll down)",
-                "text": "Viewport is sparse; scroll once to reveal more article links.",
+                "text": (
+                    "Scroll one page down to reveal more article links. "
+                    "Prefer a bridge click when any visible link helps toward the goal."
+                ),
                 "what": "Scroll down one page; do not click.",
                 "not_for": "Do not scroll when any visible link is a plausible bridge toward the goal.",
             }
@@ -130,8 +125,8 @@ class JevBrain(Brain):
                         "focus": (
                             "Prefer a conceptual bridge click over scrolling. "
                             "Avoid backtracking to pages already in history unless stuck. "
-                            "Only choose SCROLL_DOWN when it is present and no visible link "
-                            "is a plausible bridge."
+                            "SCROLL_DOWN is always available in browser mode and costs a step; "
+                            "choose it only when no visible link is a plausible bridge."
                         ),
                         "goal_title": state.goal.title,
                     },
@@ -151,7 +146,6 @@ class JevBrain(Brain):
             r.raise_for_status()
             data = r.json()
         choice = data["answers"]["next"]["choice"]
-        # If model still returns SCROLL_DOWN somehow when not offered, fall back to top click.
         if scroll_key and choice == scroll_key:
             self._scroll_streak += 1
             action = Action(action="scroll", direction="down", amount="page")
@@ -171,7 +165,7 @@ class JevBrain(Brain):
             "request": payload,
             "response": data,
             "scroll_streak": self._scroll_streak,
-            "allow_scroll": allow_scroll,
+            "scroll_offered": scroll_key is not None,
         }
 
 
