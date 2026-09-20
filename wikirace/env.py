@@ -85,6 +85,9 @@ class RaceEnv:
     finalist_k: int = FINALIST_K
     last_chosen_score: float | None = None
     finalist_picks: int = 0
+    # Titles/ids blocked after revisits (handles redirects that bypass path filter)
+    _blocked_titles: set[str] = field(default_factory=set)
+    _blocked_ids: set[str] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         self.reset()
@@ -107,6 +110,8 @@ class RaceEnv:
         self._episode_scores = {}
         self.last_chosen_score = None
         self.finalist_picks = 0
+        self._blocked_titles = set()
+        self._blocked_ids = set()
         if self.is_browser:
             assert self.browser is not None
             self.browser.open_article(self.start)
@@ -160,11 +165,20 @@ class RaceEnv:
         if self._goal_reached(title):
             return False
         key = self._score_key(title)
+        if key in self._blocked_titles:
+            return True
         return any(self._score_key(p) == key for p in self.path)
 
     def _filter_visited(self, cands: list[Candidate]) -> list[Candidate]:
-        """Drop already-visited pages from offered clicks (keep goal)."""
-        return [c for c in cands if not self._is_visited(c.title)]
+        """Drop already-visited / blocked pages from offered clicks (keep goal)."""
+        out: list[Candidate] = []
+        for c in cands:
+            if c.id in self._blocked_ids:
+                continue
+            if self._is_visited(c.title):
+                continue
+            out.append(c)
+        return out
 
     def ingest_scores(self, scores: list[dict] | list[LinkScore]) -> None:
         """Merge scores into page + episode books, keeping the highest per title."""
@@ -489,6 +503,31 @@ class RaceEnv:
             title = cand.title
             self.current = title
 
+        # Block path ping-pong / redirect revisits: if we landed on a page
+        # already on the path, blacklist this link id and landed title.
+        landed_key = self._score_key(title)
+        already = any(self._score_key(p) == landed_key for p in self.path)
+        if already and not self._goal_reached(title):
+            self._blocked_titles.add(landed_key)
+            self._blocked_titles.add(self._score_key(cand.title))
+            if link_id:
+                self._blocked_ids.add(link_id)
+            # Stay on the revisited page but do not grow the path again.
+            self.current = title
+            self.click_count += 1
+            self._clear_page_books()
+            self._bump(1)
+            return StepResult(
+                True,
+                title,
+                "revisit_blocked",
+                action="click",
+                actions_consumed=recovery + 1,
+                recovery_scrolls=recovery,
+            )
+
+        self._blocked_titles.add(landed_key)
+        self._blocked_titles.add(self._score_key(cand.title))
         self.current = title
         self.path.append(title)
         self.click_count += 1
