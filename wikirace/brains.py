@@ -863,6 +863,17 @@ class LayaBrain(_ScoreBookBrain):
         agent = self._agent_or_load()
         return agent.predict(state, questions)
 
+    @staticmethod
+    def _short_circuit_choice(criteria: dict[str, Any]) -> str | None:
+        """Laya's act-head calls topk(2) and crashes on a 1-option Choice.
+
+        When only one legal action remains, take it without calling the model
+        (Jev/TypeSafe tolerates k=1; local Laya 0.3.4 does not).
+        """
+        if len(criteria) == 1:
+            return next(iter(criteria.keys()))
+        return None
+
     def _score_viewport(self, state: RaceState) -> tuple[list[LinkScore], dict]:
         """Batch Score visible candidates for bridge relevance toward the goal."""
         to_score = list(state.viewport)[:SCORE_BATCH]
@@ -1030,16 +1041,24 @@ class LayaBrain(_ScoreBookBrain):
                 "criteria": criteria,
             }
         }
-        data = self._predict(choice_state, questions)
-        choice = data["answers"]["next"]["choice"]
-        if choice not in criteria:
-            probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
-            ranked = sorted(
-                ((k, v) for k, v in probs.items() if k in criteria),
-                key=lambda kv: kv[1],
-                reverse=True,
-            )
-            choice = ranked[0][0] if ranked else top[0].id
+        sc = self._short_circuit_choice(criteria)
+        if sc is not None:
+            choice = sc
+            data = {
+                "answers": {"next": {"choice": choice, "short_circuit": True}},
+                "model": "laya-short-circuit",
+            }
+        else:
+            data = self._predict(choice_state, questions)
+            choice = data["answers"]["next"]["choice"]
+            if choice not in criteria:
+                probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+                ranked = sorted(
+                    ((k, v) for k, v in probs.items() if k in criteria),
+                    key=lambda kv: kv[1],
+                    reverse=True,
+                )
+                choice = ranked[0][0] if ranked else top[0].id
         chosen = next((c for c in top if c.id == choice), top[0])
         return (
             Action(action="click", link_id=choice),
@@ -1189,8 +1208,16 @@ class LayaBrain(_ScoreBookBrain):
                 "criteria": criteria,
             }
         }
-        data = self._predict(choice_state, questions)
-        choice = data["answers"]["next"]["choice"]
+        sc = self._short_circuit_choice(criteria)
+        if sc is not None:
+            choice = sc
+            data = {
+                "answers": {"next": {"choice": choice, "short_circuit": True}},
+                "model": "laya-short-circuit",
+            }
+        else:
+            data = self._predict(choice_state, questions)
+            choice = data["answers"]["next"]["choice"]
         if choice == "SCROLL_DOWN":
             action = Action(action="scroll", direction="down", amount="page")
             chosen_score = None
