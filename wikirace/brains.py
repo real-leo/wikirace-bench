@@ -393,7 +393,7 @@ class JevBrain(_ScoreBookBrain):
                         f"(bridge score {c.score if c.score is not None else 'n/a'})."
                     ),
                 }
-                payload = {
+        payload = {
             "model": self.model,
             "state": {
                 "task": "wikirace_finalist",
