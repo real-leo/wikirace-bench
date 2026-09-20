@@ -9,7 +9,7 @@ import httpx
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "data" / "fixture_wiki.json"
 
-USER_AGENT = "wikirace-bench/0.2 (research; contact: local)"
+USER_AGENT = "WikiRaceBench/0.2 (https://github.com/real-leo/wikirace-bench; research eval bot)"
 
 # Same length cap for goal descriptions and page intro extracts.
 EXTRACT_CHARS = 280
@@ -30,6 +30,7 @@ def fetch_intro_extract(title: str, lang: str = "en", max_chars: int = EXTRACT_C
                     "prop": "extracts",
                     "exintro": 1,
                     "explaintext": 1,
+                    "redirects": 1,
                     "titles": title,
                 },
             )

@@ -169,16 +169,18 @@ def test_goal_description_is_extract_not_title_echo():
 
 
 def test_fetch_intro_extract_bald_mountain_smoke():
-    """Live API smoke: Bald Mountain intro is real extract text, not title echo."""
-    text = fetch_intro_extract("Bald Mountain (Alaska)", lang="en", max_chars=EXTRACT_CHARS)
-    if not text:
-        # Offline / blocked network — skip soft
-        return
+    """Live API smoke: goal description is Wikipedia intro extract, not title echo."""
+    text = fetch_intro_extract(
+        "Bald Mountain Recreation Area", lang="en", max_chars=EXTRACT_CHARS
+    )
+    assert text, "expected MediaWiki intro extract (check User-Agent / network)"
     assert "Reach the Wikipedia article titled" not in text
     assert len(text) > 40
-    assert text.lower() != "bald mountain (alaska)"
-    # Geography / mountain cues
-    assert any(k in text.lower() for k in ("mountain", "alaska", "peak", "summit", "range"))
+    assert text.lower() != "bald mountain recreation area"
+    assert any(
+        k in text.lower()
+        for k in ("recreation", "park", "michigan", "mountain", "area", "trail")
+    )
 
 
 def test_avg_score_scope_documented():
