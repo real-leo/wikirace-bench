@@ -66,28 +66,45 @@ class JevBrain(Brain):
     """Typesafe Jev Choice over click candidates; may also scroll if empty."""
 
     name = "jev"
+    # Offer SCROLL_DOWN only when the viewport is sparse (code owns workflow).
+    _SCROLL_IF_FEWER_THAN = 10
+    # After this many consecutive scrolls, force a click among visible links.
+    _MAX_SCROLL_STREAK = 2
 
     def __init__(self, model: str = "jev-latest") -> None:
         self.model = model
         self.api_key = os.environ["TYPESAFE_API_KEY"]
         self.base = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
+        self._scroll_streak = 0
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
         if not state.candidates:
+            self._scroll_streak += 1
             action = Action(action="scroll", direction="down", amount="page")
-            return action, {"policy": "jev_scroll_empty"}
+            return action, {"policy": "jev_scroll_empty", "scroll_streak": self._scroll_streak}
 
-        criteria = {
-            c.id: {"title": c.title, "text": c.text or c.extract}
+        criteria: dict[str, Any] = {
+            c.id: {
+                "title": c.title,
+                "text": (c.text or c.extract or "")[:240],
+                "what": f"Click the Wikipedia link titled {c.title!r}",
+            }
             for c in state.candidates
         }
-        # Include scroll as a synthetic option when browser mode
+        # Include scroll as a synthetic option only when sparse / allowed to scroll.
         scroll_key = None
-        if state.source in ("browser", "live_browser"):
+        allow_scroll = (
+            state.source in ("browser", "live_browser")
+            and len(state.candidates) < self._SCROLL_IF_FEWER_THAN
+            and self._scroll_streak < self._MAX_SCROLL_STREAK
+        )
+        if allow_scroll:
             scroll_key = "SCROLL_DOWN"
             criteria[scroll_key] = {
                 "title": "(scroll down)",
-                "text": "No good link in viewport; scroll to reveal more.",
+                "text": "Viewport is sparse; scroll once to reveal more article links.",
+                "what": "Scroll down one page; do not click.",
+                "not_for": "Do not scroll when any visible link is a plausible bridge toward the goal.",
             }
 
         payload = {
@@ -99,15 +116,25 @@ class JevBrain(Brain):
                 "history": state.history,
                 "step": state.step,
                 "max_steps": state.max_steps,
+                "n_candidates": len(state.candidates),
+                "scroll_streak": self._scroll_streak,
             },
             "questions": {
                 "next": {
                     "type": "choice",
-                    "instructions": (
-                        "WikiRace: pick the candidate most likely to reach the goal. "
-                        "Prefer conceptual bridges. Avoid backtracking unless stuck. "
-                        "If no link helps, choose SCROLL_DOWN when present."
-                    ),
+                    "instructions": {
+                        "question": (
+                            "WikiRace: choose the single next action that best progresses "
+                            "toward the goal page."
+                        ),
+                        "focus": (
+                            "Prefer a conceptual bridge click over scrolling. "
+                            "Avoid backtracking to pages already in history unless stuck. "
+                            "Only choose SCROLL_DOWN when it is present and no visible link "
+                            "is a plausible bridge."
+                        ),
+                        "goal_title": state.goal.title,
+                    },
                     "criteria": criteria,
                 }
             },
@@ -124,11 +151,28 @@ class JevBrain(Brain):
             r.raise_for_status()
             data = r.json()
         choice = data["answers"]["next"]["choice"]
+        # If model still returns SCROLL_DOWN somehow when not offered, fall back to top click.
         if scroll_key and choice == scroll_key:
+            self._scroll_streak += 1
             action = Action(action="scroll", direction="down", amount="page")
         else:
+            if choice not in {c.id for c in state.candidates}:
+                # Unexpected option; pick highest non-scroll probability if available.
+                probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+                ranked = sorted(
+                    ((k, v) for k, v in probs.items() if k != "SCROLL_DOWN" and k in criteria),
+                    key=lambda kv: kv[1],
+                    reverse=True,
+                )
+                choice = ranked[0][0] if ranked else state.candidates[0].id
+            self._scroll_streak = 0
             action = Action(action="click", link_id=choice)
-        return action, {"request": payload, "response": data}
+        return action, {
+            "request": payload,
+            "response": data,
+            "scroll_streak": self._scroll_streak,
+            "allow_scroll": allow_scroll,
+        }
 
 
 LLM_SYSTEM = """You are a WikiRace agent controlling a live Wikipedia browser.
