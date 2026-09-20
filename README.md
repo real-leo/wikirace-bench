@@ -95,10 +95,10 @@ are not an equivalent benchmark of model ability.
 |---|---|
 | `jev` | Page (default): Score when needed, then Choice; legacy viewport |
 | `overlap` | Page and viewport, using token-overlap heuristics |
-| `laya` | Viewport only; local Score + Choice, requires `laya` and `USE_TF=0` |
+| `laya` | Page (default) and viewport; local Score + Choice, requires `laya` and `USE_TF=0` |
 | `gpt` / `deepseek` / `claude` | Viewport only; JSON actions |
 
-Pass `--observation viewport` explicitly for brains without a page policy.
+Pass `--observation viewport` explicitly for brains without a page policy (gpt/deepseek/claude).
 Fixture and MediaWiki API sources retain their existing non-browser behavior.
 
 ## Install

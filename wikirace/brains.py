@@ -1002,6 +1002,79 @@ class LayaBrain(_ScoreBookBrain):
         agent = self._agent_or_load()
         return agent.predict(state, questions)
 
+    def _post(self, payload: dict[str, Any], timeout: float = 60.0) -> dict[str, Any]:
+        """Map System One payload to local Laya predict; shape expected by page_policy.
+
+        Short-circuits 1-option Choice (Laya act-head topk(2) crashes on k=1).
+        Caps Choice criteria to PAGE_SHORTLIST_K when page_policy offers a direct
+        Choice among ≤255 links — Laya head_max_len (~192) cannot pack that many
+        rendered options (Jev/TypeSafe can). Prefer goal title, then bridge_score.
+        ``timeout`` is accepted for Jev/_post API compatibility and unused locally.
+        """
+        del timeout  # local inference; episode deadline enforced by eval loop
+        if self._deadline is not None and time.perf_counter() >= self._deadline:
+            raise TimeoutError("episode_deadline_exceeded")
+        from wikirace.env import PAGE_SHORTLIST_K
+
+        state = payload.get("state") or {}
+        questions = payload.get("questions") or {}
+        goal_title = ""
+        if isinstance(state, dict):
+            g = state.get("goal") or {}
+            if isinstance(g, dict):
+                goal_title = str(g.get("title") or "")
+        goal_key = _title_key(goal_title) if goal_title else ""
+
+        answers: dict[str, Any] = {}
+        remaining: dict[str, Any] = {}
+        for qid, qdef in questions.items():
+            if not (
+                isinstance(qdef, dict)
+                and str(qdef.get("type", "")).lower() == "choice"
+            ):
+                remaining[qid] = qdef
+                continue
+            criteria = qdef.get("criteria") or {}
+            if not isinstance(criteria, dict):
+                remaining[qid] = qdef
+                continue
+            if len(criteria) == 1:
+                choice = next(iter(criteria.keys()))
+                answers[qid] = {
+                    "type": "choice",
+                    "choice": choice,
+                    "short_circuit": True,
+                    "probabilities": {choice: 1.0},
+                }
+                continue
+            if len(criteria) > PAGE_SHORTLIST_K:
+                def _rank(cid: str) -> tuple:
+                    meta = criteria[cid] if isinstance(criteria[cid], dict) else {}
+                    title = str(meta.get("title") or "")
+                    is_goal = 1 if goal_key and _title_key(title) == goal_key else 0
+                    score = meta.get("bridge_score")
+                    if score is None:
+                        score = meta.get("score")
+                    try:
+                        sc = float(score) if score is not None else -1.0
+                    except (TypeError, ValueError):
+                        sc = -1.0
+                    return (is_goal, sc)
+
+                keep_ids = sorted(criteria.keys(), key=_rank, reverse=True)[
+                    :PAGE_SHORTLIST_K
+                ]
+                qdef = {**qdef, "criteria": {cid: criteria[cid] for cid in keep_ids}}
+            remaining[qid] = qdef
+        if not remaining:
+            return {"answers": answers, "model": "laya-short-circuit"}
+        data = self._predict(state, remaining)
+        merged = dict(data.get("answers") or {})
+        merged.update(answers)
+        out = dict(data)
+        out["answers"] = merged
+        return out
+
     @staticmethod
     def _short_circuit_choice(criteria: dict[str, Any]) -> str | None:
         """Laya's act-head calls topk(2) and crashes on a 1-option Choice.
@@ -1098,6 +1171,9 @@ class LayaBrain(_ScoreBookBrain):
         return scored, {"score_request": {"state": score_state, "questions": questions}, "score_response": data}
 
     def _score_viewport_for_env(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        if state.observation_mode == "page":
+            from wikirace.page_policy import score_page
+            return score_page(self, state)
         return self._score_viewport(state)
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
@@ -1110,7 +1186,10 @@ class LayaBrain(_ScoreBookBrain):
         scores_dump: list[dict],
         score_dbg: dict,
     ) -> tuple[Action, dict]:
-
+        if state.observation_mode == "page":
+            from wikirace.page_policy import choose_page
+            action, debug = choose_page(self, state)
+            return action, {**score_dbg, **debug}
         finalist = bool(state.action.finalist_mode) or (
             state.source in ("browser", "live_browser")
             and not state.action.can_scroll_down

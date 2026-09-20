@@ -145,8 +145,8 @@ def run_episode(
         if env.browser is not None:
             setup_navigation = getattr(env.browser, "last_navigation", None)
         state = env.observe()
-        if state.observation_mode == "page" and brain.name not in {"jev", "overlap"}:
-            raise ValueError("page_mode_supports_jev_and_overlap: use observation_mode=viewport for other brains")
+        if state.observation_mode == "page" and brain.name not in {"jev", "overlap", "laya"}:
+            raise ValueError("page_mode_supports_jev_overlap_laya: use observation_mode=viewport for other brains")
         setup_seconds = time.perf_counter() - total_t0
         action_t0 = time.perf_counter()
         deadline = None if max_seconds is None else action_t0 + max_seconds

@@ -43,7 +43,7 @@ def cli() -> None:
 @click.option("--lang", default="en", help="Wikipedia language code")
 @click.option("--out", default=None, type=click.Path(dir_okay=False), help="Save the full episode JSON, including decision evidence.")
 @click.option("--headless/--headed", default=True, help="Chromium headless (default true)")
-@click.option("--observation", "observation_mode", default="page", type=click.Choice(["page", "viewport"]), show_default=True, help="page=all rendered article links, click only (Jev/overlap); viewport=scroll/click")
+@click.option("--observation", "observation_mode", default="page", type=click.Choice(["page", "viewport"]), show_default=True, help="page=all rendered article links, click only (jev/overlap/laya); viewport=scroll/click")
 @click.option(
     "--timeout",
     default=DEFAULT_TIMEOUT_S,
