@@ -15,6 +15,18 @@ class Candidate(BaseModel):
     # Legacy / offline fields (optional)
     text: str = ""
     extract: str = ""
+    # Best bridge-relevance score seen so far (optional in observation)
+    score: float | None = None
+
+
+class LinkScore(BaseModel):
+    """Persisted relevance score for a link (keyed by title)."""
+
+    id: str
+    title: str
+    context: str = ""
+    score: float = 0.0
+    href_key: str = ""  # normalized title key
 
 
 class PageRef(BaseModel):
@@ -38,7 +50,13 @@ class ActionState(BaseModel):
     # None when unlimited; otherwise soft remaining for the model
     remaining_steps: int | None = None
     can_scroll_down: bool = True
+    # Scroll-up is never offered to the model (recovery scrolls are executor-only).
     can_scroll_up: bool = False
+    # Model scrolls on the current page (resets on navigation).
+    page_scroll_count: int = 0
+    # True when at page bottom: model must pick among top-K scored finalists.
+    finalist_mode: bool = False
+    finalist_k: int = 5
 
 
 class RaceState(BaseModel):
@@ -46,7 +64,7 @@ class RaceState(BaseModel):
 
     - viewport: links visible in the current browser viewport (main content)
     - memory: union of current + previous screen links (v1, no extra model filter)
-    - offered click ids = viewport ∪ memory
+    - offered click ids = viewport ∪ memory (normal), or top-K finalists (bottom)
     Real hrefs stay in the executor only.
     """
 
@@ -63,6 +81,10 @@ class RaceState(BaseModel):
     step: int = 0
     max_steps: int = 0  # 0 = unlimited
     candidates: list[Candidate] = Field(default_factory=list)  # = offered set
+    # Top-K highest-scored links seen on this page (filled in finalist mode)
+    finalists: list[Candidate] = Field(default_factory=list)
+    # Snapshot of best scores for links seen on the current page
+    page_scores: list[LinkScore] = Field(default_factory=list)
 
     def offered_ids(self) -> set[str]:
         return {c.id for c in self.candidates}
@@ -71,9 +93,10 @@ class RaceState(BaseModel):
         return self.offered_ids()
 
     def candidate_for(self, link_id: str) -> Candidate | None:
-        for c in self.candidates:
-            if c.id == link_id:
-                return c
+        for bucket in (self.candidates, self.finalists, self.memory, self.viewport):
+            for c in bucket:
+                if c.id == link_id:
+                    return c
         return None
 
     def title_for(self, link_id: str) -> str | None:
@@ -98,6 +121,7 @@ class RaceState(BaseModel):
                     "title": c.title,
                     "context": c.context or c.text or c.extract,
                     "position": c.position,
+                    "score": c.score,
                 }
                 for c in self.viewport
             ],
@@ -107,8 +131,18 @@ class RaceState(BaseModel):
                     "title": c.title,
                     "context": c.context or c.text or c.extract,
                     "position": c.position,
+                    "score": c.score,
                 }
                 for c in self.memory
+            ],
+            "finalists": [
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "context": c.context or c.text or c.extract,
+                    "score": c.score,
+                }
+                for c in self.finalists
             ],
             "action": {
                 "path": self.action.path,
@@ -120,7 +154,9 @@ class RaceState(BaseModel):
                     else self.action.remaining_steps
                 ),
                 "can_scroll_down": self.action.can_scroll_down,
-                "can_scroll_up": self.action.can_scroll_up,
+                "page_scroll_count": self.action.page_scroll_count,
+                "finalist_mode": self.action.finalist_mode,
+                "finalist_k": self.action.finalist_k,
             },
             "source": self.source,
         }
@@ -135,8 +171,10 @@ class Action(BaseModel):
     """Agent action schema (JSON).
 
     {"action":"click","link_id":"L001"}
-    {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
+    {"action":"scroll","direction":"down","amount":"page"|"half"}
     {"action":"translate","target_lang":"zh"}  # optional; also costs one step
+
+    Model-facing scroll is down-only. Executor may still scroll up for recovery.
     """
 
     action: ActionName
@@ -166,7 +204,7 @@ def parse_action(raw: Any) -> Action:
     """Parse brain output into Action. Accepts dict or JSON-like objects.
 
     Legacy: bare {"link_id":"L001"} is treated as click.
-    SCROLL_DOWN / SCROLL_UP choice keys map to scroll actions.
+    SCROLL_DOWN choice key maps to scroll down. SCROLL_UP is rejected.
     """
     if isinstance(raw, Action):
         return raw
@@ -175,7 +213,7 @@ def parse_action(raw: Any) -> Action:
         if s == "SCROLL_DOWN":
             return Action(action="scroll", direction="down", amount="page")
         if s == "SCROLL_UP":
-            return Action(action="scroll", direction="up", amount="page")
+            raise ValueError("scroll_up_removed: only SCROLL_DOWN is offered")
         return Action(action="click", link_id=s)
     if not isinstance(raw, dict):
         raise ValueError(f"action_not_object:{type(raw).__name__}")

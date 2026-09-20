@@ -124,6 +124,8 @@ def run_episode(
                         "n_memory": len(state.memory),
                         "can_scroll_down": state.action.can_scroll_down,
                         "can_scroll_up": state.action.can_scroll_up,
+                        "finalist_mode": bool(state.action.finalist_mode),
+                        "page_scroll_count": state.action.page_scroll_count,
                         "action": None,
                         "chosen_title": None,
                         "latency_ms": 0,
@@ -141,8 +143,16 @@ def run_episode(
                 action, debug, err = None, {}, f"{type(exc).__name__}: {exc}"
             moved = None
             action_dict = None
+            # Persist bridge scores from the brain into the env score books.
+            if debug.get("scores"):
+                try:
+                    env.ingest_scores(debug["scores"])
+                except Exception:
+                    pass
             if err:
                 status, reason = "error", err
+            elif debug.get("fail_reason"):
+                status, reason = "fail", str(debug["fail_reason"])
             else:
                 assert action is not None
                 action_dict = action.to_public_dict()
@@ -161,8 +171,11 @@ def run_episode(
                     "n_memory": len(state.memory),
                     "can_scroll_down": state.action.can_scroll_down,
                     "can_scroll_up": state.action.can_scroll_up,
+                    "finalist_mode": bool(state.action.finalist_mode),
+                    "page_scroll_count": state.action.page_scroll_count,
                     "action": action_dict,
                     "chosen_title": None if not moved or not moved.ok else moved.title,
+                    "chosen_score": debug.get("chosen_score"),
                     "latency_ms": int((time.time() - step_t0) * 1000),
                     "error": err,
                     "brain_debug_keys": list(debug.keys()),
@@ -171,11 +184,18 @@ def run_episode(
                     "steps_so_far": env.step_count,
                     "clicks_so_far": env.click_count,
                     "scrolls_so_far": env.scroll_count,
+                    "finalist_mode_fired": bool(debug.get("finalist_mode")),
                 }
             )
             if status != "running":
                 break
             state = env.observe()
+        metrics = {}
+        try:
+            metrics = env.score_metrics()
+        except Exception:
+            metrics = {}
+        finalist_fired = any(bool(t.get("finalist_mode_fired") or t.get("finalist_mode")) for t in trace)
         return {
             **_episode_base(task, brain),
             "start": task["start"],
@@ -187,6 +207,11 @@ def run_episode(
             "scrolls": env.scroll_count,
             "path": env.path,
             "seconds": round(time.time() - t0, 3),
+            "chosen_score": metrics.get("chosen_score"),
+            "max_score": metrics.get("max_score"),
+            "avg_score": metrics.get("avg_score"),
+            "finalist_picks": metrics.get("finalist_picks", 0),
+            "finalist_mode_fired": finalist_fired,
             "trace": trace,
             "error_stack": traceback.format_exc() if status == "error" else None,
         }

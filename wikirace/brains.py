@@ -8,7 +8,19 @@ from typing import Any
 
 import httpx
 
-from wikirace.state import Action, RaceState, parse_action
+from wikirace.state import Action, Candidate, LinkScore, RaceState, parse_action
+
+FINALIST_K = 5
+SCORE_BATCH = 20  # max viewport links scored per step
+SCORE_LEVELS = [
+    "Irrelevant or misleading; would not help reach the goal",
+    "Weak / tangential connection to the goal topic",
+    "Reasonable bridge; related concepts that could lead toward the goal",
+    "Strong bridge; clearly on a short path toward the goal",
+    "Direct or near-direct path to the goal (or is the goal itself)",
+]
+# Normalize Score (0..4) to 0..1 for storage/ranking.
+SCORE_TOP = float(len(SCORE_LEVELS) - 1)
 
 
 class Brain(ABC):
@@ -27,83 +39,430 @@ def _overlap(a: str, b: str) -> int:
     return len(_tokens(a) & _tokens(b))
 
 
-class OverlapBrain(Brain):
-    """Heuristic: click highest overlap with goal; else scroll down if allowed."""
+def _title_key(title: str) -> str:
+    return re.sub(r"\s+", " ", title.replace("_", " ").strip()).lower()
+
+
+class _ScoreBookBrain(Brain):
+    """Shared page/episode score memory + finalist helpers."""
+
+    def __init__(self) -> None:
+        self._page_title: str | None = None
+        self._page_scores: dict[str, LinkScore] = {}
+        self._episode_scores: dict[str, LinkScore] = {}
+
+    def _sync_page(self, state: RaceState) -> None:
+        title = state.current.title
+        if title != self._page_title:
+            self._page_title = title
+            self._page_scores = {}
+
+    def _merge_scores(self, scores: list[LinkScore]) -> list[dict]:
+        dumped: list[dict] = []
+        for entry in scores:
+            if not entry.title:
+                continue
+            key = _title_key(entry.title)
+            if not entry.href_key:
+                entry = entry.model_copy(update={"href_key": key})
+            for store in (self._page_scores, self._episode_scores):
+                prev = store.get(key)
+                if prev is None or entry.score >= prev.score:
+                    store[key] = entry
+            dumped.append(entry.model_dump())
+        return dumped
+
+    def _heuristic_score(self, cand: Candidate, state: RaceState) -> float:
+        goal = state.goal.title + " " + (state.goal.description or state.goal.extract)
+        blob = f"{cand.title} {cand.context or cand.text} {cand.extract}"
+        raw = float(_overlap(blob, goal))
+        if cand.title.lower() == state.goal.title.lower():
+            raw += 100.0
+        if state.history and cand.title == state.history[-1]:
+            raw -= 3.0
+        elif cand.title in state.history:
+            raw -= 1.0
+        # Map rough overlap into 0..1 (cap at 8 token hits ≈ top)
+        return max(0.0, min(1.0, raw / 8.0))
+
+    def _score_viewport_heuristic(self, state: RaceState) -> list[LinkScore]:
+        out: list[LinkScore] = []
+        for c in state.viewport:
+            out.append(
+                LinkScore(
+                    id=c.id,
+                    title=c.title,
+                    context=(c.context or c.text or "")[:240],
+                    score=self._heuristic_score(c, state),
+                    href_key=_title_key(c.title),
+                )
+            )
+        return out
+
+    def _top_k_from_book(
+        self, state: RaceState, k: int = FINALIST_K
+    ) -> list[Candidate]:
+        """Build top-K candidates from page scores, preferring live ids."""
+        by_title: dict[str, Candidate] = {}
+        for c in list(state.memory) + list(state.viewport) + list(state.candidates):
+            by_title[_title_key(c.title)] = c
+        # Prefer env-provided finalists if present (already ranked)
+        if state.action.finalist_mode and state.finalists:
+            return list(state.finalists)[:k]
+
+        ranked = sorted(
+            self._page_scores.values(), key=lambda s: s.score, reverse=True
+        )[:k]
+        finalists: list[Candidate] = []
+        for sc in ranked:
+            live = by_title.get(_title_key(sc.title))
+            if live is not None:
+                finalists.append(
+                    live.model_copy(
+                        update={"score": sc.score, "context": sc.context or live.context}
+                    )
+                )
+            else:
+                finalists.append(
+                    Candidate(
+                        id=sc.id,
+                        title=sc.title,
+                        context=sc.context,
+                        score=sc.score,
+                        position="scored_memory",
+                    )
+                )
+        return finalists
+
+
+class OverlapBrain(_ScoreBookBrain):
+    """Heuristic scores + scroll-down / click; bottom forces top-K finalist click."""
 
     name = "overlap"
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        goal = state.goal.title + " " + (state.goal.description or state.goal.extract)
+        self._sync_page(state)
+        scored = self._score_viewport_heuristic(state)
+        score_dump = self._merge_scores(scored)
+
+        finalist = bool(state.action.finalist_mode) or (
+            state.source in ("browser", "live_browser")
+            and not state.action.can_scroll_down
+        )
+
+        if finalist:
+            top = self._top_k_from_book(state, k=state.action.finalist_k or FINALIST_K)
+            if not top:
+                return (
+                    Action(action="click", link_id=""),
+                    {
+                        "policy": "finalist_empty",
+                        "fail_reason": "finalist_empty",
+                        "scores": score_dump,
+                        "finalist_mode": True,
+                        "page_scroll_count": state.action.page_scroll_count,
+                    },
+                )
+            best = max(top, key=lambda c: (c.score if c.score is not None else -1.0))
+            return (
+                Action(action="click", link_id=best.id),
+                {
+                    "policy": "finalist_heuristic",
+                    "scores": score_dump,
+                    "finalist_mode": True,
+                    "finalists": [
+                        {"id": c.id, "title": c.title, "score": c.score} for c in top
+                    ],
+                    "chosen_score": best.score,
+                    "page_scroll_count": state.action.page_scroll_count,
+                },
+            )
+
         offered = state.candidates
         if not offered:
             if state.action.can_scroll_down:
                 return (
                     Action(action="scroll", direction="down", amount="page"),
-                    {"policy": "scroll_no_candidates"},
+                    {"policy": "scroll_no_candidates", "scores": score_dump},
                 )
-            if state.action.can_scroll_up:
-                return (
-                    Action(action="scroll", direction="up", amount="page"),
-                    {"policy": "scroll_up_no_candidates"},
-                )
-            # Nowhere to go — click impossible; pick a no-op scroll that will fail
             return (
                 Action(action="scroll", direction="down", amount="page"),
-                {"policy": "stuck_no_candidates"},
+                {
+                    "policy": "stuck_no_candidates",
+                    "fail_reason": "stuck_no_candidates",
+                    "scores": score_dump,
+                },
             )
 
         best_id = offered[0].id
-        best = -(10**9)
+        best = -1.0
         for c in offered:
-            blob = f"{c.title} {c.context or c.text} {c.extract}"
-            s = _overlap(blob, goal)
-            if c.title.lower() == state.goal.title.lower():
-                s += 100
-            if state.history and c.title == state.history[-1]:
-                s -= 3
-            elif c.title in state.history:
-                s -= 1
+            key = _title_key(c.title)
+            sc = self._page_scores.get(key)
+            s = sc.score if sc is not None else self._heuristic_score(c, state)
             if s > best:
                 best, best_id = s, c.id
 
-        if best <= 0 and state.action.can_scroll_down and state.source in (
+        if best <= 0.05 and state.action.can_scroll_down and state.source in (
             "browser",
             "live_browser",
         ):
             return (
                 Action(action="scroll", direction="down", amount="page"),
-                {"policy": "scroll_low_overlap", "best_score": best},
+                {
+                    "policy": "scroll_low_score",
+                    "best_score": best,
+                    "scores": score_dump,
+                },
             )
 
         return (
             Action(action="click", link_id=best_id),
-            {"policy": "token_overlap", "score": best, "link_id": best_id},
+            {
+                "policy": "token_overlap",
+                "score": best,
+                "chosen_score": best,
+                "link_id": best_id,
+                "scores": score_dump,
+                "finalist_mode": False,
+            },
         )
 
 
-class JevBrain(Brain):
-    """Typesafe Choice over offered link ids + SCROLL_DOWN/UP when physically allowed.
+class JevBrain(_ScoreBookBrain):
+    """TypeSafe Score (bridge relevance) + Choice (scroll-down / click / finalist).
 
-    The MODEL decides scroll vs click. No Noul gate. Scroll and click each count
-    equally in step metrics (no hard max_steps fail).
+    Each step scores visible candidates as bridges toward the goal (keep max).
+    Normal mode: Choice among {SCROLL_DOWN if allowed} ∪ clickable ids.
+    Finalist mode (page bottom): Choice only among top-K scored link ids.
     """
 
     name = "jev"
 
     def __init__(self, model: str = "jev-latest") -> None:
+        super().__init__()
         self.model = model
         self.api_key = os.environ["TYPESAFE_API_KEY"]
         self.base = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
 
+    def _post(self, payload: dict[str, Any], timeout: float = 60.0) -> dict[str, Any]:
+        with httpx.Client(timeout=timeout) as client:
+            r = client.post(
+                f"{self.base}/v1/systemone",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            r.raise_for_status()
+            return r.json()
+
+    def _score_viewport(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        """Batch Score visible candidates for bridge relevance toward the goal."""
+        to_score = list(state.viewport)[:SCORE_BATCH]
+        if not to_score:
+            return [], {}
+
+        questions: dict[str, Any] = {}
+        cand_state: dict[str, Any] = {}
+        for c in to_score:
+            qid = f"score_{c.id}"
+            ctx = (c.context or c.text or c.extract or "")[:240]
+            cand_state[c.id] = {"title": c.title, "context": ctx}
+            questions[qid] = {
+                "type": "score",
+                "instructions": {
+                    "question": (
+                        "How useful is this Wikipedia link as a conceptual bridge "
+                        "toward the goal article?"
+                    ),
+                    "focus": (
+                        "Rate bridge relevance only — not writing quality. "
+                        "A good bridge need not match the goal directly; related "
+                        "topics that shorten the path count. "
+                        f"Goal title: {state.goal.title}."
+                    ),
+                    "candidate_id": c.id,
+                },
+                "criteria": SCORE_LEVELS,
+            }
+
+        payload = {
+            "model": self.model,
+            "state": {
+                "task": "wikirace_bridge_relevance",
+                "goal": {
+                    "title": state.goal.title,
+                    "description": state.goal.description or state.goal.extract,
+                },
+                "current_page": {
+                    "title": state.current.title,
+                    "description": state.current.description or state.current.extract,
+                },
+                "path": state.action.path or state.history,
+                "candidates": cand_state,
+            },
+            "questions": questions,
+        }
+        data = self._post(payload)
+        answers = data.get("answers") or {}
+        scored: list[LinkScore] = []
+        for c in to_score:
+            ans = answers.get(f"score_{c.id}") or {}
+            raw = float(ans.get("score") or 0.0)
+            norm = raw / SCORE_TOP if SCORE_TOP else 0.0
+            scored.append(
+                LinkScore(
+                    id=c.id,
+                    title=c.title,
+                    context=(c.context or c.text or "")[:240],
+                    score=round(norm, 4),
+                    href_key=_title_key(c.title),
+                )
+            )
+        return scored, {"score_request": payload, "score_response": data}
+
     def choose(self, state: RaceState) -> tuple[Action, dict]:
+        self._sync_page(state)
+        scored, score_dbg = self._score_viewport(state)
+        score_dump = self._merge_scores(scored)
+
+        finalist = bool(state.action.finalist_mode) or (
+            state.source in ("browser", "live_browser")
+            and not state.action.can_scroll_down
+        )
+        page_scrolls = state.action.page_scroll_count
+
+        if finalist:
+            top = self._top_k_from_book(state, k=state.action.finalist_k or FINALIST_K)
+            if not top:
+                return (
+                    Action(action="click", link_id=""),
+                    {
+                        "policy": "finalist_empty",
+                        "fail_reason": "finalist_empty",
+                        "scores": score_dump,
+                        "finalist_mode": True,
+                        "page_scroll_count": page_scrolls,
+                        **score_dbg,
+                    },
+                )
+            return self._finalist_choice(state, top, score_dump, score_dbg, page_scrolls)
+
+        return self._normal_choice(state, score_dump, score_dbg)
+
+    def _finalist_choice(
+        self,
+        state: RaceState,
+        top: list[Candidate],
+        score_dump: list[dict],
+        score_dbg: dict,
+        page_scrolls: int,
+    ) -> tuple[Action, dict]:
+        criteria: dict[str, Any] = {}
+        for c in top:
+            criteria[c.id] = {
+                "title": c.title,
+                "context": (c.context or c.text or "")[:240],
+                "score": c.score,
+                "what": (
+                    f"Click the Wikipedia link titled {c.title!r} "
+                    f"(bridge score {c.score if c.score is not None else 'n/a'})."
+                ),
+            }
+        payload = {
+            "model": self.model,
+            "state": {
+                "task": "wikirace_finalist",
+                "goal": {
+                    "title": state.goal.title,
+                    "description": state.goal.description or state.goal.extract,
+                },
+                "current": {
+                    "title": state.current.title,
+                    "description": state.current.description or state.current.extract,
+                },
+                "path": state.action.path or state.history,
+                "page_scroll_count": page_scrolls,
+                "finalists": [
+                    {
+                        "id": c.id,
+                        "title": c.title,
+                        "context": (c.context or "")[:200],
+                        "score": c.score,
+                    }
+                    for c in top
+                ],
+            },
+            "questions": {
+                "next": {
+                    "type": "choice",
+                    "instructions": {
+                        "question": (
+                            f"You have scrolled {page_scrolls} times on this page "
+                            "and reached the bottom. Pick the single best remaining "
+                            "candidate to click toward the goal."
+                        ),
+                        "focus": (
+                            "You cannot scroll further. Choose among the top-scored "
+                            "bridge candidates seen while scrolling this page. "
+                            "Prefer the strongest conceptual bridge toward the goal; "
+                            "avoid backtracking to pages already on the path unless "
+                            "no better option exists."
+                        ),
+                        "goal_title": state.goal.title,
+                    },
+                    "criteria": criteria,
+                }
+            },
+        }
+        data = self._post(payload)
+        choice = data["answers"]["next"]["choice"]
+        if choice not in criteria:
+            probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+            ranked = sorted(
+                ((k, v) for k, v in probs.items() if k in criteria),
+                key=lambda kv: kv[1],
+                reverse=True,
+            )
+            choice = ranked[0][0] if ranked else top[0].id
+        chosen = next((c for c in top if c.id == choice), top[0])
+        return (
+            Action(action="click", link_id=choice),
+            {
+                "policy": "finalist_choice",
+                "request": payload,
+                "response": data,
+                "scores": score_dump,
+                "finalist_mode": True,
+                "finalists": [
+                    {"id": c.id, "title": c.title, "score": c.score} for c in top
+                ],
+                "chosen_score": chosen.score,
+                "page_scroll_count": page_scrolls,
+                **score_dbg,
+            },
+        )
+
+    def _normal_choice(
+        self,
+        state: RaceState,
+        score_dump: list[dict],
+        score_dbg: dict,
+    ) -> tuple[Action, dict]:
         criteria: dict[str, Any] = {}
         for c in state.candidates:
             pos = c.position or "current_viewport"
             in_view = "current_viewport" in pos
+            key = _title_key(c.title)
+            sc = self._page_scores.get(key)
+            score_hint = sc.score if sc is not None else c.score
             criteria[c.id] = {
                 "title": c.title,
                 "context": (c.context or c.text or c.extract or "")[:240],
                 "position": pos,
+                "score": score_hint,
                 "what": (
                     f"Click the Wikipedia link titled {c.title!r}"
                     + (
@@ -112,43 +471,43 @@ class JevBrain(Brain):
                         else " (remembered from another viewport; executor will "
                         "scroll back, counting recovery scrolls as steps)."
                     )
+                    + (
+                        f" Bridge score so far: {score_hint}."
+                        if score_hint is not None
+                        else ""
+                    )
                 ),
             }
 
         scroll_keys: list[str] = []
-        if state.source in ("browser", "live_browser"):
-            if state.action.can_scroll_down:
-                criteria["SCROLL_DOWN"] = {
-                    "title": "(scroll down)",
-                    "what": "Scroll one page down to reveal more article links.",
-                    "not_for": (
-                        "Do not scroll when a visible or remembered link is already "
-                        "a reasonable bridge toward the goal. Scroll costs one step, "
-                        "same as a click."
-                    ),
-                }
-                scroll_keys.append("SCROLL_DOWN")
-            if state.action.can_scroll_up:
-                criteria["SCROLL_UP"] = {
-                    "title": "(scroll up)",
-                    "what": "Scroll one page up.",
-                    "not_for": (
-                        "Do not scroll up unless you expect a better bridge above. "
-                        "Scroll costs one step, same as a click."
-                    ),
-                }
-                scroll_keys.append("SCROLL_UP")
+        if state.source in ("browser", "live_browser") and state.action.can_scroll_down:
+            criteria["SCROLL_DOWN"] = {
+                "title": "(scroll down)",
+                "what": "Scroll one page down to reveal more article links.",
+                "not_for": (
+                    "Do not scroll when a visible or remembered link is already "
+                    "a reasonable bridge toward the goal. Scroll costs one step, "
+                    "same as a click."
+                ),
+            }
+            scroll_keys.append("SCROLL_DOWN")
 
         if not criteria:
-            # Absolute stuck (no links, cannot scroll)
-            action = Action(action="scroll", direction="down", amount="page")
-            return action, {"policy": "jev_stuck_empty"}
+            return (
+                Action(action="scroll", direction="down", amount="page"),
+                {
+                    "policy": "jev_stuck_empty",
+                    "fail_reason": "stuck_empty",
+                    "scores": score_dump,
+                    **score_dbg,
+                },
+            )
 
         unlimited = state.action.max_steps <= 0
         remaining = None if unlimited else state.action.remaining_steps
         remaining_msg = (
-            "No hard step limit — minimize total actions; at page bottom "
-            "SCROLL_DOWN is unavailable so you must click or scroll up."
+            "No hard step limit — minimize total actions. At page bottom "
+            "SCROLL_DOWN is unavailable and you enter finalist mode."
             if unlimited
             else f"Soft remaining steps (info only, not a hard fail): {remaining}."
         )
@@ -169,7 +528,7 @@ class JevBrain(Brain):
                 "max_steps": state.action.max_steps,
                 "remaining_steps": remaining,
                 "can_scroll_down": state.action.can_scroll_down,
-                "can_scroll_up": state.action.can_scroll_up,
+                "page_scroll_count": state.action.page_scroll_count,
                 "n_viewport": len(state.viewport),
                 "n_memory": len(state.memory),
             },
@@ -183,17 +542,15 @@ class JevBrain(Brain):
                             "total actions."
                         ),
                         "focus": (
-                            "Scroll and click each count as one action; minimize "
-                            "total actions to reach the goal. "
-                            "A current best candidate need not match the goal "
-                            "directly — a reasonable conceptual bridge is enough. "
-                            "Only scroll if you expect clearly more valuable "
-                            "candidates by scrolling. "
-                            "Prefer an early click on a reasonable bridge over "
-                            "waiting for a near-synonym with the goal. "
-                            "Avoid backtracking to pages already on the path "
-                            "unless stuck. "
-                            "Do not oscillate scroll up/down without clicking. "
+                            "Scroll-down and click each count as one action; "
+                            "minimize total actions to reach the goal. "
+                            "Scores reflect bridge relevance toward the goal — "
+                            "prefer higher-scored bridges when clicking. "
+                            "A reasonable conceptual bridge is enough; do not wait "
+                            "for a near-synonym. Only scroll if you expect clearly "
+                            "more valuable candidates below. Prefer an early click "
+                            "on a reasonable bridge over waiting. Avoid backtracking "
+                            "to pages already on the path unless stuck. "
                             + remaining_msg
                         ),
                         "goal_title": state.goal.title,
@@ -202,30 +559,21 @@ class JevBrain(Brain):
                 }
             },
         }
-        with httpx.Client(timeout=30.0) as client:
-            r = client.post(
-                f"{self.base}/v1/systemone",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            r.raise_for_status()
-            data = r.json()
+        data = self._post(payload)
         choice = data["answers"]["next"]["choice"]
         if choice == "SCROLL_DOWN":
             action = Action(action="scroll", direction="down", amount="page")
-        elif choice == "SCROLL_UP":
-            action = Action(action="scroll", direction="up", amount="page")
+            chosen_score = None
         else:
             if choice not in {c.id for c in state.candidates}:
-                probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+                probs = (
+                    (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+                )
                 ranked = sorted(
                     (
                         (k, v)
                         for k, v in probs.items()
-                        if k not in ("SCROLL_DOWN", "SCROLL_UP") and k in criteria
+                        if k != "SCROLL_DOWN" and k in criteria
                     ),
                     key=lambda kv: kv[1],
                     reverse=True,
@@ -233,44 +581,65 @@ class JevBrain(Brain):
                 choice = ranked[0][0] if ranked else (
                     state.candidates[0].id if state.candidates else "SCROLL_DOWN"
                 )
-                if choice in ("SCROLL_DOWN", "SCROLL_UP"):
-                    action = Action(
-                        action="scroll",
-                        direction="down" if choice == "SCROLL_DOWN" else "up",
-                        amount="page",
-                    )
-                    return action, {"request": payload, "response": data, "fallback": True}
+                if choice == "SCROLL_DOWN":
+                    action = Action(action="scroll", direction="down", amount="page")
+                    return action, {
+                        "request": payload,
+                        "response": data,
+                        "fallback": True,
+                        "scores": score_dump,
+                        "scroll_offered": scroll_keys,
+                        **score_dbg,
+                    }
             action = Action(action="click", link_id=choice)
+            key = None
+            for c in state.candidates:
+                if c.id == choice:
+                    key = _title_key(c.title)
+                    break
+            chosen_score = (
+                self._page_scores[key].score
+                if key and key in self._page_scores
+                else None
+            )
         return action, {
             "request": payload,
             "response": data,
             "scroll_offered": scroll_keys,
+            "scores": score_dump,
+            "chosen_score": chosen_score,
+            "finalist_mode": False,
+            **score_dbg,
         }
 
 
 LLM_SYSTEM = """You are a WikiRace agent controlling a live Wikipedia browser.
 Each step you see: goal, current viewport links (with sentence context), candidate
-memory (union of current + previous screen), and action state (path, step counts,
-can_scroll_down / can_scroll_up). max_steps/remaining_steps are soft info only
-(0/null = unlimited); episodes do not fail on step count.
+memory (union of current + previous screen), optional bridge scores, and action
+state (path, step counts, can_scroll_down, page_scroll_count, finalist_mode).
+max_steps/remaining_steps are soft info only (0/null = unlimited); episodes do
+not fail on step count.
 
 You must return ONE JSON action, nothing else.
 
 Actions (EQUAL COST — each counts as one step in metrics):
 1. Click an offered link: {"action":"click","link_id":"L001"}
-   - link_id MUST be in viewport ∪ memory ids. Inventing ids fails the race.
+   - link_id MUST be in the offered set. Inventing ids fails the race.
    - Clicking a remembered off-screen link makes the executor scroll back first;
      those recovery scrolls also count as steps.
-2. Scroll: {"action":"scroll","direction":"down"|"up","amount":"page"|"half"}
-   - Only when can_scroll_down / can_scroll_up is true (bottom drops SCROLL_DOWN;
-     top drops SCROLL_UP). Do not oscillate up/down without clicking.
+2. Scroll down: {"action":"scroll","direction":"down","amount":"page"|"half"}
+   - Only when can_scroll_down is true. SCROLL_UP is not available.
 3. Translate (optional): {"action":"translate","target_lang":"zh"} — also one step.
+
+Finalist mode (action.finalist_mode=true, typically at page bottom):
+- You have scrolled page_scroll_count times on this page.
+- Choose ONLY among the listed finalists (top-K scored bridges). No scroll.
 
 Strategy:
 - Minimize total actions to reach the goal.
+- Prefer higher bridge-relevance scores when deciding what to click.
 - A reasonable conceptual bridge is enough; do not wait for a near-synonym.
 - Only scroll if you expect clearly more valuable candidates by scrolling.
-- Prefer an early click on a reasonable bridge over endless scrolling.
 Never invent page titles. Never explain. JSON only."""
 
 
@@ -306,7 +675,7 @@ class OpenAICompatBrain(Brain):
             "properties": {
                 "action": {"type": "string", "enum": ["click", "scroll", "translate"]},
                 "link_id": {"type": "string"},
-                "direction": {"type": "string", "enum": ["up", "down"]},
+                "direction": {"type": "string", "enum": ["down"]},
                 "amount": {"type": "string", "enum": ["page", "half"]},
                 "target_lang": {"type": "string"},
             },

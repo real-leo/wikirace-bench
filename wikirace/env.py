@@ -4,7 +4,15 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from wikirace.browser import WikiBrowser, normalize_wiki_title
-from wikirace.state import Action, ActionState, Candidate, PageRef, RaceState, parse_action
+from wikirace.state import (
+    Action,
+    ActionState,
+    Candidate,
+    LinkScore,
+    PageRef,
+    RaceState,
+    parse_action,
+)
 from wikirace.wiki import WikiSource
 
 if TYPE_CHECKING:
@@ -14,8 +22,8 @@ MAX_CANDIDATES = 255
 EXTRACT_CACHE_CHARS = 180
 # Recovery scrolls when clicking an off-screen memory link (cap per click).
 MAX_RECOVERY_SCROLLS = 20
-# Consecutive alternating up/down scrolls with no click → fail (nice-to-have).
-SCROLL_OSCILLATION_LIMIT = 12
+# Top-K highest-scored links forced at page bottom (finalist mode).
+FINALIST_K = 5
 
 
 @dataclass
@@ -33,18 +41,21 @@ class StepResult:
 
 @dataclass
 class RaceEnv:
-    """WikiRace environment — equal-cost actions.
+    """WikiRace environment — equal-cost scroll-down / click.
 
     Primary mode: source=browser (DrissionPage, viewport-visible links).
     Offline: fixture / live MediaWiki API (full-page links, no real scroll).
 
+    Model actions: scroll DOWN + click link_id (no SCROLL_UP).
+    At page bottom (can_scroll_down=False) observation enters finalist_mode:
+    the brain must choose among the top-K highest-scored links seen on this page.
+
     Every action (click, scroll, translate) counts equally in metrics (steps).
     Episodes do NOT fail on step count — termination is goal / illegal action /
-    wall-clock timeout / optional scroll oscillation. max_steps is soft info
-    only (0 = unlimited in observation).
+    wall-clock timeout / finalist_empty. max_steps is soft info only
+    (0 = unlimited in observation).
     Clicking a remembered off-screen link auto-scrolls toward it; each recovery
     scroll also counts as one step, then the click costs one more.
-    At page bottom SCROLL_DOWN is not offered; at top SCROLL_UP is not offered.
     """
 
     start: str
@@ -65,8 +76,15 @@ class RaceEnv:
     # Previous viewport candidates (public Candidate list) for memory union
     _prev_viewport: list[Candidate] = field(default_factory=list)
     _curr_viewport: list[Candidate] = field(default_factory=list)
-    # Model scroll directions since last click (for oscillation detection)
-    _scroll_dirs: list[str] = field(default_factory=list)
+    # Model scrolls on the current page (resets on navigation)
+    page_scroll_count: int = 0
+    # Best bridge score per link title on the current page
+    _page_scores: dict[str, LinkScore] = field(default_factory=dict)
+    # Episode-wide best scores (keep highest; for metrics)
+    _episode_scores: dict[str, LinkScore] = field(default_factory=dict)
+    finalist_k: int = FINALIST_K
+    last_chosen_score: float | None = None
+    finalist_picks: int = 0
 
     def __post_init__(self) -> None:
         self.reset()
@@ -81,10 +99,14 @@ class RaceEnv:
         self.step_count = 0
         self.click_count = 0
         self.scroll_count = 0
+        self.page_scroll_count = 0
         self._last_state = None
         self._prev_viewport = []
         self._curr_viewport = []
-        self._scroll_dirs = []
+        self._page_scores = {}
+        self._episode_scores = {}
+        self.last_chosen_score = None
+        self.finalist_picks = 0
         if self.is_browser:
             assert self.browser is not None
             self.browser.open_article(self.start)
@@ -130,6 +152,98 @@ class RaceEnv:
         can_up = not bool(m.get("at_top"))
         return can_down, can_up
 
+    def _score_key(self, title: str) -> str:
+        return normalize_wiki_title(title).lower()
+
+    def ingest_scores(self, scores: list[dict] | list[LinkScore]) -> None:
+        """Merge scores into page + episode books, keeping the highest per title."""
+        for raw in scores:
+            if isinstance(raw, LinkScore):
+                entry = raw
+            else:
+                entry = LinkScore(
+                    id=str(raw.get("id") or ""),
+                    title=str(raw.get("title") or ""),
+                    context=str(raw.get("context") or "")[:280],
+                    score=float(raw.get("score") or 0.0),
+                    href_key=str(raw.get("href_key") or ""),
+                )
+            if not entry.title:
+                continue
+            key = self._score_key(entry.title)
+            if not entry.href_key:
+                entry = entry.model_copy(update={"href_key": key})
+            for store in (self._page_scores, self._episode_scores):
+                prev = store.get(key)
+                if prev is None or entry.score >= prev.score:
+                    store[key] = entry
+
+    def top_k_finalists(self, k: int | None = None) -> list[LinkScore]:
+        """Highest-scored links seen on the current page."""
+        k = self.finalist_k if k is None else k
+        ranked = sorted(self._page_scores.values(), key=lambda s: s.score, reverse=True)
+        return ranked[:k]
+
+    def _annotate_scores(self, cands: list[Candidate]) -> list[Candidate]:
+        out: list[Candidate] = []
+        for c in cands:
+            key = self._score_key(c.title)
+            sc = self._page_scores.get(key) or self._episode_scores.get(key)
+            if sc is not None:
+                out.append(c.model_copy(update={"score": sc.score}))
+            else:
+                out.append(c)
+        return out
+
+    def _finalist_candidates(self, memory: list[Candidate]) -> list[Candidate]:
+        """Map top-K page scores onto Candidate objects (prefer live memory ids)."""
+        by_title: dict[str, Candidate] = {}
+        for c in memory:
+            by_title[self._score_key(c.title)] = c
+        for c in list(self._curr_viewport) + list(self._prev_viewport):
+            by_title.setdefault(self._score_key(c.title), c)
+
+        finalists: list[Candidate] = []
+        for sc in self.top_k_finalists():
+            key = self._score_key(sc.title)
+            live = by_title.get(key)
+            if live is not None:
+                finalists.append(
+                    live.model_copy(
+                        update={
+                            "score": sc.score,
+                            "context": sc.context or live.context,
+                        }
+                    )
+                )
+            else:
+                finalists.append(
+                    Candidate(
+                        id=sc.id,
+                        title=sc.title,
+                        context=sc.context,
+                        score=sc.score,
+                        position="scored_memory",
+                    )
+                )
+        return finalists
+
+    def _clear_page_books(self) -> None:
+        self._page_scores = {}
+        self.page_scroll_count = 0
+        self._prev_viewport = []
+        self._curr_viewport = []
+
+    def score_metrics(self) -> dict:
+        vals = [s.score for s in self._episode_scores.values()]
+        return {
+            "n_scored_links": len(vals),
+            "max_score": max(vals) if vals else None,
+            "avg_score": round(sum(vals) / len(vals), 3) if vals else None,
+            "chosen_score": self.last_chosen_score,
+            "finalist_picks": self.finalist_picks,
+        }
+
     def _build_memory(self, viewport: list[Candidate]) -> list[Candidate]:
         """Union of previous screen + current screen; prefer keeping both fully."""
         by_id: dict[str, Candidate] = {}
@@ -151,7 +265,7 @@ class RaceEnv:
         return items
 
     def observe(self) -> RaceState:
-        can_down, can_up = self._scroll_flags()
+        can_down, _can_up = self._scroll_flags()
         if self.max_steps <= 0:
             remaining: int | None = None
         else:
@@ -178,7 +292,8 @@ class RaceEnv:
             # On first observe after navigation, prev is empty; after scroll,
             # caller should have rotated prev←curr before observe. If not yet
             # rotated (first call), prev stays [].
-            memory = self._build_memory(viewport)
+            viewport = self._annotate_scores(viewport)
+            memory = self._annotate_scores(self._build_memory(viewport))
             self._curr_viewport = viewport
 
             current_extract = meta.get("extract", "")[:EXTRACT_CACHE_CHARS]
@@ -186,13 +301,21 @@ class RaceEnv:
             if not goal_extract:
                 goal_extract = f"Reach the Wikipedia article titled {self.goal}."
 
+            # Finalist mode: at page bottom the model must pick among top-K scored links.
+            finalist_mode = not can_down
+            finalists = self._finalist_candidates(memory) if finalist_mode else []
+            offered = finalists if finalist_mode else memory
+
             action_state = ActionState(
                 path=list(self.path),
                 step=self.step_count,
                 max_steps=self.max_steps,
                 remaining_steps=remaining,
                 can_scroll_down=can_down,
-                can_scroll_up=can_up,
+                can_scroll_up=False,  # never offered to the model
+                page_scroll_count=self.page_scroll_count,
+                finalist_mode=finalist_mode,
+                finalist_k=self.finalist_k,
             )
             state = RaceState(
                 goal=PageRef(
@@ -206,7 +329,9 @@ class RaceEnv:
                 history=list(self.path),
                 step=self.step_count,
                 max_steps=self.max_steps,
-                candidates=memory,  # offered set = memory union
+                candidates=offered,
+                finalists=finalists,
+                page_scores=list(self._page_scores.values()),
                 source=self.source,
             )
             self._last_state = state
@@ -233,6 +358,7 @@ class RaceEnv:
                     position="current_viewport",
                 )
             )
+        candidates = self._annotate_scores(candidates)
         action_state = ActionState(
             path=list(self.path),
             step=self.step_count,
@@ -240,6 +366,9 @@ class RaceEnv:
             remaining_steps=remaining,
             can_scroll_down=False,
             can_scroll_up=False,
+            page_scroll_count=0,
+            finalist_mode=False,
+            finalist_k=self.finalist_k,
         )
         state = RaceState(
             goal=PageRef(title=self.goal, description=self._short_extract(self.goal)),
@@ -253,6 +382,8 @@ class RaceEnv:
             step=self.step_count,
             max_steps=self.max_steps,
             candidates=candidates,
+            finalists=[],
+            page_scores=list(self._page_scores.values()),
             source=self.source,
         )
         self._last_state = state
@@ -295,6 +426,12 @@ class RaceEnv:
                 False, None, f"illegal_id:{link_id}", failed=True, action="click"
             )
 
+        key = self._score_key(cand.title)
+        sc = self._page_scores.get(key) or self._episode_scores.get(key)
+        self.last_chosen_score = sc.score if sc is not None else cand.score
+        if state.action.finalist_mode:
+            self.finalist_picks += 1
+
         recovery = 0
         if self.is_browser:
             assert self.browser is not None
@@ -331,9 +468,6 @@ class RaceEnv:
                 )
             meta = self.browser.current_meta()
             title = meta["title"] or hit.title
-            # New page: clear viewport memory
-            self._prev_viewport = []
-            self._curr_viewport = []
         else:
             title = cand.title
             self.current = title
@@ -341,7 +475,7 @@ class RaceEnv:
         self.current = title
         self.path.append(title)
         self.click_count += 1
-        self._scroll_dirs = []  # click breaks scroll oscillation streak
+        self._clear_page_books()
         self._bump(1)
 
         if self._goal_reached(title):
@@ -366,25 +500,21 @@ class RaceEnv:
     def _step_scroll(self, action: Action, state: RaceState) -> StepResult:
         direction = action.direction or "down"
         amount = action.amount or "page"
-        if direction not in ("up", "down"):
+        # Model-facing scroll is down-only (recovery uses browser.scroll directly).
+        if direction != "down":
             return StepResult(
-                False, None, f"bad_direction:{direction}", failed=True, action="scroll"
+                False,
+                self.current,
+                "scroll_up_removed",
+                failed=True,
+                action="scroll",
             )
 
-        # Physical: refuse scroll past edges (should not be offered, but guard)
-        if direction == "down" and not state.action.can_scroll_down:
+        if not state.action.can_scroll_down:
             return StepResult(
                 False,
                 self.current,
                 "scroll_down_unavailable",
-                failed=True,
-                action="scroll",
-            )
-        if direction == "up" and not state.action.can_scroll_up:
-            return StepResult(
-                False,
-                self.current,
-                "scroll_up_unavailable",
                 failed=True,
                 action="scroll",
             )
@@ -394,30 +524,12 @@ class RaceEnv:
 
         if self.is_browser:
             assert self.browser is not None
-            self.browser.scroll(direction=direction, amount=amount or "page")
+            self.browser.scroll(direction="down", amount=amount or "page")
 
         self.scroll_count += 1
+        self.page_scroll_count += 1
         self._bump(1)
-        self._scroll_dirs.append(direction)
-        if self._is_scroll_oscillating():
-            return StepResult(
-                True,
-                self.current,
-                "scroll_oscillation",
-                failed=True,
-                action="scroll",
-            )
-        return StepResult(
-            True, self.current, f"scrolled_{direction}", action="scroll"
-        )
-
-    def _is_scroll_oscillating(self) -> bool:
-        """Fail if many consecutive model scrolls strictly alternate up/down."""
-        dirs = self._scroll_dirs
-        if len(dirs) < SCROLL_OSCILLATION_LIMIT:
-            return False
-        window = dirs[-SCROLL_OSCILLATION_LIMIT:]
-        return all(window[i] != window[i + 1] for i in range(len(window) - 1))
+        return StepResult(True, self.current, "scrolled_down", action="scroll")
 
     def _step_translate(self, action: Action) -> StepResult:
         target = (action.target_lang or "").strip()
@@ -428,9 +540,7 @@ class RaceEnv:
         if self.is_browser:
             assert self.browser is not None
             self.browser.translate(target)
-        self._prev_viewport = []
-        self._curr_viewport = []
-        self._scroll_dirs = []
+        self._clear_page_books()
         self._bump(1)
         return StepResult(
             True, self.current, f"translated:{target}", action="translate"
