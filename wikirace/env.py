@@ -13,13 +13,13 @@ from wikirace.state import (
     RaceState,
     parse_action,
 )
-from wikirace.wiki import WikiSource
+from wikirace.wiki import EXTRACT_CHARS, WikiSource, fetch_intro_extract
 
 if TYPE_CHECKING:
     pass
 
 MAX_CANDIDATES = 255
-EXTRACT_CACHE_CHARS = 180
+EXTRACT_CACHE_CHARS = EXTRACT_CHARS  # same length cap as goal / page intro extracts
 # Recovery scrolls when clicking an off-screen memory link (cap per click).
 MAX_RECOVERY_SCROLLS = 20
 # Top-K highest-scored links forced at page bottom (finalist mode).
@@ -85,9 +85,11 @@ class RaceEnv:
     finalist_k: int = FINALIST_K
     last_chosen_score: float | None = None
     finalist_picks: int = 0
-    # Titles/ids blocked after revisits (handles redirects that bypass path filter)
+    # Titles blocked after revisits (handles redirects that bypass path filter).
+    # Keyed by normalized title only — never by link id (ids like L001 reuse across pages).
     _blocked_titles: set[str] = field(default_factory=set)
-    _blocked_ids: set[str] = field(default_factory=set)
+    # Scores of links actually clicked this episode (for avg_clicked_score).
+    _clicked_scores: list[float] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         self.reset()
@@ -111,7 +113,7 @@ class RaceEnv:
         self.last_chosen_score = None
         self.finalist_picks = 0
         self._blocked_titles = set()
-        self._blocked_ids = set()
+        self._clicked_scores = []
         if self.is_browser:
             assert self.browser is not None
             self.browser.open_article(self.start)
@@ -122,11 +124,34 @@ class RaceEnv:
         else:
             self._ensure(self.start)
             self._ensure(self.goal)
+        self._ensure_goal_extract()
         return self.observe()
 
     def close(self) -> None:
         if self.browser is not None:
             self.browser.close()
+
+
+    def _ensure_goal_extract(self) -> str:
+        """Load goal intro extract (same MediaWiki source/length as page extracts)."""
+        cached = self.extracts.get(self.goal, "")
+        if cached and not cached.startswith("Reach the Wikipedia article titled"):
+            return cached[:EXTRACT_CACHE_CHARS]
+        if self.wiki is not None:
+            try:
+                self._ensure(self.goal)
+                got = self.extracts.get(self.goal, "")
+                if got:
+                    return got[:EXTRACT_CACHE_CHARS]
+            except Exception:
+                pass
+        got = fetch_intro_extract(self.goal, lang=self.lang, max_chars=EXTRACT_CACHE_CHARS)
+        if got:
+            self.extracts[self.goal] = got
+            return got
+        fallback = f"Reach the Wikipedia article titled {self.goal}."
+        self.extracts[self.goal] = fallback
+        return fallback
 
     def _ensure(self, title: str) -> None:
         if self.wiki is None:
@@ -170,11 +195,12 @@ class RaceEnv:
         return any(self._score_key(p) == key for p in self.path)
 
     def _filter_visited(self, cands: list[Candidate]) -> list[Candidate]:
-        """Drop already-visited / blocked pages from offered clicks (keep goal)."""
+        """Drop already-visited / blocked pages from offered clicks (keep goal).
+
+        Blocking is by normalized title only — never by link id.
+        """
         out: list[Candidate] = []
         for c in cands:
-            if c.id in self._blocked_ids:
-                continue
             if self._is_visited(c.title):
                 continue
             out.append(c)
@@ -204,10 +230,58 @@ class RaceEnv:
                     store[key] = entry
 
     def top_k_finalists(self, k: int | None = None) -> list[LinkScore]:
-        """Highest-scored links seen on the current page."""
+        """Highest-scored *selectable* links seen on the current page.
+
+        Visited/blocked titles are excluded *before* taking top-K so a valid
+        #6 is never dropped because the top-5 were all already visited.
+        Finalists stay scoped to the current page score book (no episode teleport).
+        """
         k = self.finalist_k if k is None else k
-        ranked = sorted(self._page_scores.values(), key=lambda s: s.score, reverse=True)
+        eligible = [
+            s for s in self._page_scores.values() if not self._is_visited(s.title)
+        ]
+        ranked = sorted(eligible, key=lambda s: s.score, reverse=True)
         return ranked[:k]
+
+
+    def refresh_finalists(self) -> RaceState:
+        """Rebuild offered candidates / finalists from the updated page score book.
+
+        Call after ``ingest_scores`` so Choice sees newly scored viewport links
+        (including a last-viewport goal) before picking. Does not re-observe the
+        browser — only re-ranks from ``_page_scores`` + current memory/viewport.
+        """
+        state = self._last_state
+        if state is None:
+            return self.observe()
+
+        viewport = self._annotate_scores(list(self._curr_viewport or state.viewport))
+        if self._curr_viewport or self._prev_viewport:
+            memory = self._annotate_scores(self._build_memory(viewport))
+        else:
+            memory = self._annotate_scores(list(state.memory))
+        if self._curr_viewport:
+            self._curr_viewport = viewport
+
+        finalist_mode = bool(state.action.finalist_mode)
+        if finalist_mode:
+            finalists = self._finalist_candidates(memory)
+            offered = finalists
+        else:
+            finalists = []
+            offered = self._filter_visited(memory)
+
+        new_state = state.model_copy(
+            update={
+                "viewport": viewport,
+                "memory": memory,
+                "candidates": offered,
+                "finalists": finalists,
+                "page_scores": list(self._page_scores.values()),
+            }
+        )
+        self._last_state = new_state
+        return new_state
 
     def _annotate_scores(self, cands: list[Candidate]) -> list[Candidate]:
         out: list[Candidate] = []
@@ -260,11 +334,23 @@ class RaceEnv:
         self._curr_viewport = []
 
     def score_metrics(self) -> dict:
+        """Score book metrics.
+
+        ``avg_score`` is the mean over *all* scored titles this episode (global
+        score book), NOT a path-quality metric. Use ``avg_clicked_score`` for
+        mean bridge score of links actually clicked.
+        """
         vals = [s.score for s in self._episode_scores.values()]
+        clicked = list(self._clicked_scores)
         return {
             "n_scored_links": len(vals),
             "max_score": max(vals) if vals else None,
+            # Mean over all scored titles on the episode (not path-only).
             "avg_score": round(sum(vals) / len(vals), 3) if vals else None,
+            "avg_score_scope": "all_scored_titles",
+            "avg_clicked_score": (
+                round(sum(clicked) / len(clicked), 3) if clicked else None
+            ),
             "chosen_score": self.last_chosen_score,
             "finalist_picks": self.finalist_picks,
         }
@@ -322,19 +408,19 @@ class RaceEnv:
             self._curr_viewport = viewport
 
             current_extract = meta.get("extract", "")[:EXTRACT_CACHE_CHARS]
-            goal_extract = self.extracts.get(self.goal, "")
-            if not goal_extract:
-                goal_extract = f"Reach the Wikipedia article titled {self.goal}."
+            if current_extract:
+                self.extracts[self.current] = current_extract
+            goal_extract = self._ensure_goal_extract()
 
             # Finalist mode: at page bottom the model must pick among top-K scored links.
+            # Visited/blocked filtered BEFORE top-K inside top_k_finalists / _finalist_candidates.
             finalist_mode = not can_down
-            finalists = self._finalist_candidates(memory) if finalist_mode else []
-            offered = finalists if finalist_mode else memory
-            # Block path ping-pong: do not re-offer already-visited pages (except goal).
-            offered = self._filter_visited(offered)
             if finalist_mode:
-                finalists = self._filter_visited(finalists)
+                finalists = self._finalist_candidates(memory)
                 offered = finalists
+            else:
+                finalists = []
+                offered = self._filter_visited(memory)
 
             action_state = ActionState(
                 path=list(self.path),
@@ -451,6 +537,12 @@ class RaceEnv:
 
     def _step_click(self, action: Action, state: RaceState) -> StepResult:
         link_id = action.link_id or ""
+        # Strict: only ids in the offered set for this step (finalists or viewport∪memory).
+        offered = state.offered_ids()
+        if link_id not in offered:
+            return StepResult(
+                False, None, f"illegal_id:{link_id}", failed=True, action="click"
+            )
         cand = state.candidate_for(link_id)
         if cand is None:
             return StepResult(
@@ -460,6 +552,8 @@ class RaceEnv:
         key = self._score_key(cand.title)
         sc = self._page_scores.get(key) or self._episode_scores.get(key)
         self.last_chosen_score = sc.score if sc is not None else cand.score
+        if self.last_chosen_score is not None:
+            self._clicked_scores.append(float(self.last_chosen_score))
         if state.action.finalist_mode:
             self.finalist_picks += 1
 
@@ -510,8 +604,6 @@ class RaceEnv:
         if already and not self._goal_reached(title):
             self._blocked_titles.add(landed_key)
             self._blocked_titles.add(self._score_key(cand.title))
-            if link_id:
-                self._blocked_ids.add(link_id)
             # Stay on the revisited page but do not grow the path again.
             self.current = title
             self.click_count += 1

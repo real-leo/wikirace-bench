@@ -11,7 +11,7 @@ import httpx
 from wikirace.state import Action, Candidate, LinkScore, RaceState, parse_action
 
 FINALIST_K = 5
-SCORE_BATCH = 20  # max viewport links scored per step
+SCORE_BATCH = 20  # API batch size; _score_viewport loops until all links scored
 SCORE_LEVELS = [
     "Irrelevant or misleading; would not help reach the goal",
     "Weak / tangential connection to the goal topic",
@@ -28,7 +28,18 @@ class Brain(ABC):
 
     @abstractmethod
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        """Return (Action, debug_payload)."""
+        """Return (Action, debug_payload). May score + choose in one call."""
+
+    def score_only(self, state: RaceState) -> tuple[list[dict], dict]:
+        """Score viewport links; return (score dumps for env.ingest_scores, debug)."""
+        return [], {}
+
+    def choose_action(self, state: RaceState) -> tuple[Action, dict]:
+        """Choose among offered candidates without (re-)scoring.
+
+        Default falls back to choose() for brains that do not split phases.
+        """
+        return self.choose(state)
 
 
 def _tokens(s: str) -> set[str]:
@@ -102,17 +113,25 @@ class _ScoreBookBrain(Brain):
     def _top_k_from_book(
         self, state: RaceState, k: int = FINALIST_K
     ) -> list[Candidate]:
-        """Build top-K candidates from page scores, preferring live ids."""
+        """Build top-K from page scores, preferring live ids.
+
+        Prefer env-provided finalists (rebuilt after ingest+refresh). Fallback
+        excludes visited/path titles *before* taking top-K.
+        """
         by_title: dict[str, Candidate] = {}
         for c in list(state.memory) + list(state.viewport) + list(state.candidates):
             by_title[_title_key(c.title)] = c
-        # Prefer env-provided finalists if present (already ranked)
-        if state.action.finalist_mode and state.finalists:
+        if state.finalists:
             return list(state.finalists)[:k]
 
-        ranked = sorted(
-            self._page_scores.values(), key=lambda s: s.score, reverse=True
-        )[:k]
+        hist = {_title_key(x) for x in (state.history or state.action.path or [])}
+        goal_key = _title_key(state.goal.title)
+        eligible = [
+            s
+            for s in self._page_scores.values()
+            if _title_key(s.title) == goal_key or _title_key(s.title) not in hist
+        ]
+        ranked = sorted(eligible, key=lambda s: s.score, reverse=True)[:k]
         finalists: list[Candidate] = []
         for sc in ranked:
             live = by_title.get(_title_key(sc.title))
@@ -135,15 +154,46 @@ class _ScoreBookBrain(Brain):
         return finalists
 
 
+
+    def score_only(self, state: RaceState) -> tuple[list[dict], dict]:
+        """Score viewport into the brain book; return dumps for env.ingest_scores."""
+        self._sync_page(state)
+        scored, dbg = self._score_viewport_for_env(state)
+        dump = self._merge_scores(scored)
+        return dump, dbg
+
+    def _score_viewport_for_env(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        """Override in model brains; Overlap uses heuristic."""
+        return self._score_viewport_heuristic(state), {"policy": "heuristic_score"}
+
+    def choose_action(self, state: RaceState) -> tuple[Action, dict]:
+        """Choose using already-scored state (env finalists refreshed). No re-score."""
+        self._sync_page(state)
+        return self._choose_after_scores(state, scores_dump=[], score_dbg={})
+
+    def _choose_after_scores(
+        self,
+        state: RaceState,
+        scores_dump: list[dict],
+        score_dbg: dict,
+    ) -> tuple[Action, dict]:
+        raise NotImplementedError
+
 class OverlapBrain(_ScoreBookBrain):
     """Heuristic scores + scroll-down / click; bottom forces top-K finalist click."""
 
     name = "overlap"
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        self._sync_page(state)
-        scored = self._score_viewport_heuristic(state)
-        score_dump = self._merge_scores(scored)
+        scores, score_dbg = self.score_only(state)
+        return self._choose_after_scores(state, scores, score_dbg)
+
+    def _choose_after_scores(
+        self,
+        state: RaceState,
+        scores_dump: list[dict],
+        score_dbg: dict,
+    ) -> tuple[Action, dict]:
 
         finalist = bool(state.action.finalist_mode) or (
             state.source in ("browser", "live_browser")
@@ -158,7 +208,7 @@ class OverlapBrain(_ScoreBookBrain):
                     {
                         "policy": "finalist_empty",
                         "fail_reason": "finalist_empty",
-                        "scores": score_dump,
+                        "scores": scores_dump,
                         "finalist_mode": True,
                         "page_scroll_count": state.action.page_scroll_count,
                     },
@@ -168,7 +218,7 @@ class OverlapBrain(_ScoreBookBrain):
                 Action(action="click", link_id=best.id),
                 {
                     "policy": "finalist_heuristic",
-                    "scores": score_dump,
+                    "scores": scores_dump,
                     "finalist_mode": True,
                     "finalists": [
                         {"id": c.id, "title": c.title, "score": c.score} for c in top
@@ -189,14 +239,14 @@ class OverlapBrain(_ScoreBookBrain):
             if state.action.can_scroll_down:
                 return (
                     Action(action="scroll", direction="down", amount="page"),
-                    {"policy": "scroll_no_candidates", "scores": score_dump},
+                    {"policy": "scroll_no_candidates", "scores": scores_dump},
                 )
             return (
                 Action(action="scroll", direction="down", amount="page"),
                 {
                     "policy": "stuck_no_candidates",
                     "fail_reason": "stuck_no_candidates",
-                    "scores": score_dump,
+                    "scores": scores_dump,
                 },
             )
 
@@ -218,7 +268,7 @@ class OverlapBrain(_ScoreBookBrain):
                 {
                     "policy": "scroll_low_score",
                     "best_score": best,
-                    "scores": score_dump,
+                    "scores": scores_dump,
                 },
             )
 
@@ -229,7 +279,7 @@ class OverlapBrain(_ScoreBookBrain):
                 "score": best,
                 "chosen_score": best,
                 "link_id": best_id,
-                "scores": score_dump,
+                "scores": scores_dump,
                 "finalist_mode": False,
             },
         )
@@ -265,8 +315,31 @@ class JevBrain(_ScoreBookBrain):
             return r.json()
 
     def _score_viewport(self, state: RaceState) -> tuple[list[LinkScore], dict]:
-        """Batch Score visible candidates for bridge relevance toward the goal."""
-        to_score = list(state.viewport)[:SCORE_BATCH]
+        """Score ALL visible candidates for bridge relevance (loop SCORE_BATCH chunks)."""
+        all_cands = list(state.viewport)
+        if not all_cands:
+            return [], {}
+        scored: list[LinkScore] = []
+        batch_dbgs: list[dict] = []
+        for i in range(0, len(all_cands), SCORE_BATCH):
+            batch = all_cands[i : i + SCORE_BATCH]
+            part, dbg = self._score_viewport_batch(state, batch)
+            scored.extend(part)
+            batch_dbgs.append(dbg)
+        out_dbg: dict = {
+            "n_viewport": len(all_cands),
+            "n_scored": len(scored),
+            "n_batches": len(batch_dbgs),
+            "score_batches": batch_dbgs,
+        }
+        if len(batch_dbgs) == 1:
+            out_dbg.update(batch_dbgs[0])
+        return scored, out_dbg
+
+    def _score_viewport_batch(
+        self, state: RaceState, to_score: list[Candidate]
+    ) -> tuple[list[LinkScore], dict]:
+        """Score one batch of viewport candidates."""
         if not to_score:
             return [], {}
 
@@ -329,10 +402,19 @@ class JevBrain(_ScoreBookBrain):
             )
         return scored, {"score_request": payload, "score_response": data}
 
+    def _score_viewport_for_env(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        return self._score_viewport(state)
+
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        self._sync_page(state)
-        scored, score_dbg = self._score_viewport(state)
-        score_dump = self._merge_scores(scored)
+        scores, score_dbg = self.score_only(state)
+        return self._choose_after_scores(state, scores, score_dbg)
+
+    def _choose_after_scores(
+        self,
+        state: RaceState,
+        scores_dump: list[dict],
+        score_dbg: dict,
+    ) -> tuple[Action, dict]:
 
         finalist = bool(state.action.finalist_mode) or (
             state.source in ("browser", "live_browser")
@@ -348,15 +430,15 @@ class JevBrain(_ScoreBookBrain):
                     {
                         "policy": "finalist_empty",
                         "fail_reason": "finalist_empty",
-                        "scores": score_dump,
+                        "scores": scores_dump,
                         "finalist_mode": True,
                         "page_scroll_count": page_scrolls,
                         **score_dbg,
                     },
                 )
-            return self._finalist_choice(state, top, score_dump, score_dbg, page_scrolls)
+            return self._finalist_choice(state, top, scores_dump, score_dbg, page_scrolls)
 
-        return self._normal_choice(state, score_dump, score_dbg)
+        return self._normal_choice(state, scores_dump, score_dbg)
 
     def _finalist_choice(
         self,
@@ -875,8 +957,31 @@ class LayaBrain(_ScoreBookBrain):
         return None
 
     def _score_viewport(self, state: RaceState) -> tuple[list[LinkScore], dict]:
-        """Batch Score visible candidates for bridge relevance toward the goal."""
-        to_score = list(state.viewport)[:SCORE_BATCH]
+        """Score ALL visible candidates for bridge relevance (loop SCORE_BATCH chunks)."""
+        all_cands = list(state.viewport)
+        if not all_cands:
+            return [], {}
+        scored: list[LinkScore] = []
+        batch_dbgs: list[dict] = []
+        for i in range(0, len(all_cands), SCORE_BATCH):
+            batch = all_cands[i : i + SCORE_BATCH]
+            part, dbg = self._score_viewport_batch(state, batch)
+            scored.extend(part)
+            batch_dbgs.append(dbg)
+        out_dbg: dict = {
+            "n_viewport": len(all_cands),
+            "n_scored": len(scored),
+            "n_batches": len(batch_dbgs),
+            "score_batches": batch_dbgs,
+        }
+        if len(batch_dbgs) == 1:
+            out_dbg.update(batch_dbgs[0])
+        return scored, out_dbg
+
+    def _score_viewport_batch(
+        self, state: RaceState, to_score: list[Candidate]
+    ) -> tuple[list[LinkScore], dict]:
+        """Score one batch of viewport candidates."""
         if not to_score:
             return [], {}
 
@@ -935,10 +1040,19 @@ class LayaBrain(_ScoreBookBrain):
             )
         return scored, {"score_request": {"state": score_state, "questions": questions}, "score_response": data}
 
+    def _score_viewport_for_env(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        return self._score_viewport(state)
+
     def choose(self, state: RaceState) -> tuple[Action, dict]:
-        self._sync_page(state)
-        scored, score_dbg = self._score_viewport(state)
-        score_dump = self._merge_scores(scored)
+        scores, score_dbg = self.score_only(state)
+        return self._choose_after_scores(state, scores, score_dbg)
+
+    def _choose_after_scores(
+        self,
+        state: RaceState,
+        scores_dump: list[dict],
+        score_dbg: dict,
+    ) -> tuple[Action, dict]:
 
         finalist = bool(state.action.finalist_mode) or (
             state.source in ("browser", "live_browser")
@@ -954,15 +1068,15 @@ class LayaBrain(_ScoreBookBrain):
                     {
                         "policy": "finalist_empty",
                         "fail_reason": "finalist_empty",
-                        "scores": score_dump,
+                        "scores": scores_dump,
                         "finalist_mode": True,
                         "page_scroll_count": page_scrolls,
                         **score_dbg,
                     },
                 )
-            return self._finalist_choice(state, top, score_dump, score_dbg, page_scrolls)
+            return self._finalist_choice(state, top, scores_dump, score_dbg, page_scrolls)
 
-        return self._normal_choice(state, score_dump, score_dbg)
+        return self._normal_choice(state, scores_dump, score_dbg)
 
     def _finalist_choice(
         self,

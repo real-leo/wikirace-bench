@@ -12,7 +12,7 @@ Minimize total actions to reach the goal article. Scroll-down and click are **eq
 
 The brain receives:
 
-1. **Goal**: `title` + short `description`
+1. **Goal**: `title` + short `description` (Wikipedia intro extract, same source/length as page extracts — not a title echo)
 2. **Current viewport**: visible article links in **main content only** (deduped; nav / sidebar / footer / infobox / references excluded). Each candidate: `id`, `title`, short **sentence context**, optional `score`. Real `href` stays in the executor only.
 3. **Candidate memory (v1)**: union of links from **current screen + previous screen**.
 4. **Action state**: `path`, `step`, `max_steps` (0=unlimited), `remaining_steps` (null when unlimited), `can_scroll_down`, `page_scroll_count`, `finalist_mode`, `finalist_k`
@@ -24,7 +24,7 @@ Example (abridged):
 
 ```json
 {
-  "goal": {"title": "Caffeine", "description": "Reach the Wikipedia article titled Caffeine."},
+  "goal": {"title": "Caffeine", "description": "A central nervous system stimulant of the methylxanthine class…"},
   "current": {"title": "Coffee", "description": "Coffee is a beverage…"},
   "viewport": [
     {"id": "L001", "title": "Caffeine", "context": "…contains the stimulant caffeine…", "position": "current_viewport|scrollY=0", "score": 0.95}
@@ -101,11 +101,12 @@ Jev prompts emphasize:
 Episode output:
 
 - `status`, `path`, `steps`, `clicks`, `scrolls`, `seconds`, `reason`
-- `chosen_score`, `max_score`, `avg_score`, `finalist_picks`, `finalist_mode_fired`
+- `chosen_score`, `max_score`, `avg_score`, `avg_clicked_score`, `finalist_picks`, `finalist_mode_fired`
 
-`summarize()`:
+**Score honesty:** `avg_score` is the mean over **all scored titles** this episode (`avg_score_scope=all_scored_titles`), not a path-quality metric. Use `avg_clicked_score` (mean bridge score of links actually clicked) when judging path quality.
 
-- `success_rate`, `avg_steps_on_success`, `avg_clicks`, `avg_scrolls`, `avg_seconds`
+**Finalist ranking (each step):** observe → `brain.score_only` → `env.ingest_scores` → `env.refresh_finalists` → `brain.choose_action`. Top-K is over **all** scored links on the **current page** after excluding visited/blocked titles (never by recycled link ids). No whole-episode timeout teleport.
+
 
 ## Install
 

@@ -93,10 +93,14 @@ class RaceState(BaseModel):
         return self.offered_ids()
 
     def candidate_for(self, link_id: str) -> Candidate | None:
-        for bucket in (self.candidates, self.finalists, self.memory, self.viewport):
-            for c in bucket:
-                if c.id == link_id:
-                    return c
+        """Resolve link_id against the *offered* set only (candidates).
+
+        When finalist_mode, candidates == finalists. Do not fall back to raw
+        viewport/memory outside the offered set — those clicks are illegal_id.
+        """
+        for c in self.candidates:
+            if c.id == link_id:
+                return c
         return None
 
     def title_for(self, link_id: str) -> str | None:

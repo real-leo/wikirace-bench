@@ -136,14 +136,24 @@ def run_episode(
                 break
 
             step_t0 = time.time()
+            scores: list = []
             try:
-                action, debug = brain.choose(state)
+                # Two-phase: score → ingest → refresh finalists → choose.
+                # Ensures last-viewport scores (e.g. goal link) enter finalist Choice.
+                scores, score_dbg = brain.score_only(state)
+                if scores:
+                    env.ingest_scores(scores)
+                    state = env.refresh_finalists()
+                action, debug = brain.choose_action(state)
+                debug = {**score_dbg, **debug}
+                if scores and "scores" not in debug:
+                    debug["scores"] = scores
                 err = None
             except Exception as exc:
                 action, debug, err = None, {}, f"{type(exc).__name__}: {exc}"
             moved = None
             action_dict = None
-            # Persist bridge scores from the brain into the env score books.
+            # Idempotent re-ingest for legacy single-phase brains that only score in choose.
             if debug.get("scores"):
                 try:
                     env.ingest_scores(debug["scores"])
@@ -209,7 +219,10 @@ def run_episode(
             "seconds": round(time.time() - t0, 3),
             "chosen_score": metrics.get("chosen_score"),
             "max_score": metrics.get("max_score"),
+            # avg_score = mean over all scored titles this episode (not path-only).
             "avg_score": metrics.get("avg_score"),
+            "avg_score_scope": metrics.get("avg_score_scope", "all_scored_titles"),
+            "avg_clicked_score": metrics.get("avg_clicked_score"),
             "finalist_picks": metrics.get("finalist_picks", 0),
             "finalist_mode_fired": finalist_fired,
             "trace": trace,

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import httpx
@@ -9,6 +10,37 @@ ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "data" / "fixture_wiki.json"
 
 USER_AGENT = "wikirace-bench/0.2 (research; contact: local)"
+
+# Same length cap for goal descriptions and page intro extracts.
+EXTRACT_CHARS = 280
+
+
+def fetch_intro_extract(title: str, lang: str = "en", max_chars: int = EXTRACT_CHARS) -> str:
+    """Wikipedia intro extract via MediaWiki API (plain text, length-capped)."""
+    if not title:
+        return ""
+    api = f"https://{lang}.wikipedia.org/w/api.php"
+    try:
+        with httpx.Client(timeout=20.0, headers={"User-Agent": USER_AGENT}) as client:
+            r = client.get(
+                api,
+                params={
+                    "action": "query",
+                    "format": "json",
+                    "prop": "extracts",
+                    "exintro": 1,
+                    "explaintext": 1,
+                    "titles": title,
+                },
+            )
+            r.raise_for_status()
+            pages = r.json()["query"]["pages"]
+            page = next(iter(pages.values()))
+            text = (page.get("extract") or "").strip().replace("\n", " ")
+            text = re.sub(r"\s+", " ", text)
+            return text[:max_chars]
+    except Exception:
+        return ""
 
 
 class WikiSource:
