@@ -2,12 +2,45 @@
 from __future__ import annotations
 
 import re
+import os
+import shutil
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlparse
 
 from DrissionPage import ChromiumOptions, ChromiumPage
+from DrissionPage.errors import ContextLostError
+
+
+class PageLoadError(RuntimeError):
+    """A navigation failure with a compact, serializable browser snapshot."""
+
+    def __init__(self, reason: str, diagnostics: dict) -> None:
+        self.reason = reason
+        self.diagnostics = diagnostics
+        super().__init__(f"wikipedia_page_unavailable:{reason}:{diagnostics.get('url', '')}")
+
+
+def find_browser_path() -> str | None:
+    """Use an explicit executable, then an installed Chrome/Chromium binary."""
+    explicit = os.environ.get("WIKIRACE_BROWSER_PATH")
+    if explicit:
+        path = Path(explicit).expanduser()
+        if not path.is_file():
+            raise FileNotFoundError(f"WIKIRACE_BROWSER_PATH does not exist: {path}")
+        return str(path)
+    candidates = [
+        shutil.which(name)
+        for name in ("google-chrome-stable", "google-chrome", "chromium", "chromium-browser")
+    ]
+    candidates += [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "/Applications/Chromium.app/Contents/MacOS/Chromium",
+        str(Path.home() / "Applications/Google Chrome.app/Contents/MacOS/Google Chrome"),
+    ]
+    return next((p for p in candidates if p and Path(p).is_file()), None)
 
 
 def normalize_wiki_title(title: str) -> str:
@@ -52,6 +85,7 @@ class VisibleLink:
 # DrissionPage run_js requires a top-level `return` to yield a value.
 _VIEWPORT_LINKS_JS = r"""
 return (() => {
+  const allPage = __ALL_PAGE__;
   const root = document.querySelector('#mw-content-text')
     || document.querySelector('#bodyContent')
     || document.querySelector('main')
@@ -64,7 +98,7 @@ return (() => {
   const out = [];
   const anchors = root.querySelectorAll('a[href]');
   for (const a of anchors) {
-    if (a.closest(
+    if (!allPage && a.closest(
       'nav, .navbox, .vertical-navbox, .toc, .mw-editsection, .reference, '
       + '.noprint, .sidebar, .infobox, .hatnote, .metadata, footer, #footer, '
       + '#mw-navigation, #mw-panel, #mw-head, .vector-header, .vector-toc, '
@@ -73,6 +107,9 @@ return (() => {
       continue;
     }
     const href = a.href || '';
+    let parsed;
+    try { parsed = new URL(href); } catch { continue; }
+    if (parsed.origin !== location.origin) continue;
     if (!/\/wiki\//.test(href)) continue;
     if (/\/wiki\/(File|Image|Category|Help|Portal|Template|Special|Talk|User|Wikipedia|MediaWiki|Draft|Module):/i.test(href)) {
       continue;
@@ -83,8 +120,10 @@ return (() => {
     }
     const rect = a.getBoundingClientRect();
     if (rect.width < 1 || rect.height < 1) continue;
+    if (typeof a.checkVisibility === 'function' &&
+        !a.checkVisibility({checkOpacity: true, checkVisibilityCSS: true})) continue;
     const visible = rect.bottom > 0 && rect.top < vh && rect.right > 0 && rect.left < vw;
-    if (!visible) continue;
+    if (!allPage && !visible) continue;
     const key = href.split('#')[0];
     if (seen.has(key)) continue;
     seen.add(key);
@@ -115,7 +154,7 @@ return (() => {
       context: context.slice(0, 280),
       abs_y: rect.top + scrollY,
     });
-    if (out.length >= 80) break;
+    if (!allPage && out.length >= 80) break;
   }
   return out;
 })()
@@ -141,6 +180,22 @@ return (() => {
 })()
 """
 
+_PAGE_STATE_JS = r"""
+return (() => {
+  const root = document.querySelector('#mw-content-text, #bodyContent');
+  const heading = document.querySelector('#firstHeading, h1.mw-first-heading');
+  const nav = performance.getEntriesByType('navigation')[0];
+  return {
+    url: location.href, title: document.title, ready_state: document.readyState,
+    document_id: performance.timeOrigin, article_root: !!root,
+    heading: (heading?.textContent || '').trim(),
+    http_status: nav?.responseStatus || null,
+    error_code: (document.querySelector('.error-code')?.textContent || '').trim(),
+    body_excerpt: root ? '' : (document.body?.innerText || '').slice(0, 500)
+  };
+})()
+"""
+
 
 class WikiBrowser:
     """Chromium-backed Wikipedia session. Observation = viewport links only."""
@@ -162,6 +217,8 @@ class WikiBrowser:
         self._next_id: int = 1
         # Internal registry for memory recall (id -> VisibleLink-like data)
         self._registry: dict[str, VisibleLink] = {}
+        self._deadline: float | None = None
+        self.last_navigation: dict = {}
 
     def _ensure(self) -> ChromiumPage:
         if self._page is not None:
@@ -171,6 +228,9 @@ class WikiBrowser:
         co.set_argument("--disable-dev-shm-usage")
         co.set_argument("--disable-gpu")
         co.set_argument("--window-size=1280,900")
+        # Readiness below waits for a new, parsed article. Do not make get()
+        # wait for unrelated images/analytics or stop their loading (eager).
+        co.set_load_mode("none")
         try:
             co.auto_port()
         except Exception:
@@ -180,17 +240,12 @@ class WikiBrowser:
                 co.headless(True)
             except Exception:
                 co.set_argument("--headless=new")
-        for path in (
-            "/usr/bin/google-chrome-stable",
-            "/usr/bin/google-chrome",
-            "/usr/bin/chromium",
-            "/usr/bin/chromium-browser",
-        ):
-            try:
-                co.set_browser_path(path)
-                break
-            except Exception:
-                continue
+        browser_path = find_browser_path()
+        if browser_path:
+            co.set_browser_path(browser_path)
+        proxy = os.environ.get("WIKIRACE_BROWSER_PROXY")
+        if proxy:
+            co.set_argument("--proxy-server", proxy)
         self._page = ChromiumPage(addr_or_opts=co)
         try:
             self._page.set.timeouts(base=self.timeout, page_load=self.timeout)
@@ -221,6 +276,31 @@ class WikiBrowser:
         slug = quote(title.replace(" ", "_"), safe=":_()/")
         return f"https://{self.lang}.wikipedia.org/wiki/{slug}"
 
+    def set_deadline(self, deadline: float | None) -> None:
+        self._deadline = deadline
+
+    def _run_js(self, script: str, timeout: float = 10.0):
+        # Runtime.evaluate uses the current execution context. The default
+        # callFunctionOn binds to DrissionPage's cached document object, which
+        # can belong to the previous page while navigation callbacks catch up.
+        if self._deadline is not None:
+            remaining = self._deadline - time.perf_counter()
+            if remaining <= 0:
+                raise TimeoutError("episode_deadline_exceeded")
+            timeout = min(timeout, remaining)
+        return self._ensure().run_js(
+            f"(() => {{ {script} }})()", as_expr=True, timeout=timeout
+        )
+
+    def _page_state(self, timeout: float = 2.0) -> dict:
+        try:
+            state = self._run_js(_PAGE_STATE_JS, timeout=timeout)
+            if isinstance(state, dict):
+                return state
+        except Exception as exc:
+            return {"diagnostic_error": type(exc).__name__}
+        return {"diagnostic_error": "invalid_browser_snapshot"}
+
     def open_article(self, title: str) -> None:
         page = self._ensure()
         self._translated = False
@@ -228,31 +308,99 @@ class WikiBrowser:
         self._registry.clear()
         self._next_id = 1
         self._last_candidates = []
-        page.get(self.wiki_url(title))
-        self._wait_ready()
+        self._navigate(self.wiki_url(title))
 
-    def _wait_ready(self, settle: float = 0.5) -> None:
+    def _wait_ready(
+        self, settle: float = 0.5, *, previous_document: float | None = None,
+        deadline: float | None = None,
+    ) -> dict:
+        deadline = deadline if deadline is not None else time.perf_counter() + self.timeout
+        stable_since = None
+        stable_document = None
+        state: dict = {}
+        while time.perf_counter() < deadline:
+            state = self._page_state(timeout=min(2.0, max(0.01, deadline - time.perf_counter())))
+            changed = previous_document is None or state.get("document_id") != previous_document
+            status = state.get("http_status") or 0
+            if changed and (status >= 400 or state.get("error_code") or
+                            str(state.get("url", "")).startswith("chrome-error:")):
+                reason = f"http_{status}" if status >= 400 else "browser_network_error"
+                raise PageLoadError(reason, state)
+            ready = (changed and state.get("ready_state") in ("interactive", "complete")
+                     and state.get("article_root") and state.get("heading"))
+            if ready:
+                if stable_document != state.get("document_id"):
+                    stable_since = time.perf_counter()
+                    stable_document = state.get("document_id")
+                if stable_since is not None and time.perf_counter() - stable_since >= settle:
+                    return state
+            else:
+                stable_since = stable_document = None
+            time.sleep(min(0.1, max(0.0, deadline - time.perf_counter())))
+        raise PageLoadError("navigation_timeout", state)
+
+    def _navigate(self, url: str, click_script: str | None = None, settle: float = 0.5) -> None:
         page = self._ensure()
-        try:
-            page.wait.doc_loaded()
-        except Exception:
-            pass
-        for _ in range(20):
+        self.last_navigation = {"requested_url": url, "attempts": []}
+        for attempt in range(2):
+            started = time.perf_counter()
+            deadline = started + self.timeout
+            if self._deadline is not None:
+                deadline = min(deadline, self._deadline)
+            if deadline <= started:
+                raise PageLoadError("episode_deadline", {"url": url})
+            record = {"attempt": attempt + 1}
+            self.last_navigation["attempts"].append(record)
             try:
-                ok = page.run_js(
-                    "return !!document.querySelector('#mw-content-text, #bodyContent')"
+                # A failed snapshot must not turn off the new-document check.
+                # Wait for the old document's identity BEFORE issuing a click.
+                while True:
+                    before = self._page_state(timeout=min(2.0, max(0.01, deadline - time.perf_counter())))
+                    if isinstance(before.get("document_id"), (int, float)):
+                        break
+                    if time.perf_counter() >= deadline:
+                        raise PageLoadError("document_snapshot_timeout", {"url": url, **before})
+                    time.sleep(min(0.1, max(0.0, deadline - time.perf_counter())))
+                record["previous_document"] = before["document_id"]
+                if time.perf_counter() >= deadline:
+                    raise PageLoadError("navigation_timeout", before)
+                clicked = False
+                if attempt == 0 and click_script:
+                    try:
+                        clicked = self._run_js(click_script)
+                    except ContextLostError:
+                        # The click can commit a navigation before its JS reply.
+                        clicked = True
+                if not clicked:
+                    record["get_returned"] = page.get(
+                        url, retry=0, timeout=max(0.01, deadline - time.perf_counter())
+                    )
+                state = self._wait_ready(
+                    settle, previous_document=before.get("document_id"), deadline=deadline
                 )
-                if ok:
-                    break
-            except Exception:
-                pass
-            time.sleep(0.2)
-        time.sleep(settle)
+                record.update(status="ok", page=state)
+                return
+            except PageLoadError as exc:
+                record.update(status="error", reason=exc.reason, page=exc.diagnostics)
+                # Do not retry access denials, missing articles, or arbitrary
+                # HTTP failures. A retry only reloads the SAME selected link.
+                retryable = exc.reason in {"navigation_timeout", "http_500", "http_502", "http_503", "http_504"}
+                if exc.reason == "browser_network_error":
+                    retryable = exc.diagnostics.get("error_code") in {
+                        "ERR_CONNECTION_RESET", "ERR_CONNECTION_CLOSED", "ERR_TIMED_OUT",
+                        "ERR_CONNECTION_TIMED_OUT", "ERR_NETWORK_CHANGED", "ERR_EMPTY_RESPONSE",
+                    }
+                if not retryable or attempt == 1 or (self._deadline is not None and time.perf_counter() >= self._deadline):
+                    raise
+            finally:
+                record["elapsed_ms"] = round((time.perf_counter() - started) * 1000)
+            pause = 0.5 if self._deadline is None else min(0.5, max(0, self._deadline - time.perf_counter()))
+            time.sleep(pause)
 
     def current_meta(self) -> dict[str, str]:
         page = self._ensure()
         try:
-            meta = page.run_js(_PAGE_META_JS)
+            meta = self._run_js(_PAGE_META_JS)
         except Exception:
             meta = None
         if not isinstance(meta, dict):
@@ -274,15 +422,24 @@ class WikiBrowser:
         self._href_to_id[href] = lid
         return lid
 
-    def observe_links(self) -> list[VisibleLink]:
+    def observe_links(self, scope: str = "viewport") -> list[VisibleLink]:
+        if scope not in {"viewport", "page"}:
+            raise ValueError(f"unknown_link_scope:{scope}")
         page = self._ensure()
         metrics = self.scroll_metrics()
         scroll_y = float(metrics.get("y") or 0)
         try:
-            raw = page.run_js(_VIEWPORT_LINKS_JS)
+            raw = self._run_js(
+                _VIEWPORT_LINKS_JS.replace("__ALL_PAGE__", "true" if scope == "page" else "false"),
+                timeout=self.timeout if scope == "page" else 10.0,
+            )
         except Exception:
+            if scope == "page":
+                raise  # Extraction failure is not a page with no links.
             raw = []
         if not isinstance(raw, list):
+            if scope == "page":
+                raise RuntimeError("invalid_article_links_snapshot")
             raw = []
         links: list[VisibleLink] = []
         for item in raw:
@@ -332,7 +489,7 @@ class WikiBrowser:
     def _click_href(self, target: VisibleLink) -> VisibleLink:
         page = self._ensure()
         href_js = target.href.replace("\\", "\\\\").replace("'", "\\'")
-        clicked = page.run_js(
+        click_script = (
             f"""
             return (() => {{
               const want = '{href_js}';
@@ -347,9 +504,7 @@ class WikiBrowser:
             }})()
             """
         )
-        if not clicked:
-            page.get(target.href)
-        self._wait_ready(0.5)
+        self._navigate(target.href, click_script=click_script)
         self._translated = False
         # New page: reset id registry
         self._href_to_id.clear()
@@ -372,7 +527,7 @@ class WikiBrowser:
         page = self._ensure()
         try:
             vh = float(
-                page.run_js(
+                self._run_js(
                     "return window.innerHeight || document.documentElement.clientHeight || 0"
                 )
                 or 0
@@ -401,7 +556,7 @@ class WikiBrowser:
         """Current scrollY and whether the viewport is at top/bottom."""
         page = self._ensure()
         try:
-            raw = page.run_js(
+            raw = self._run_js(
                 """
                 return (() => {
                   const y = window.scrollY || window.pageYOffset || 0;
@@ -435,7 +590,7 @@ class WikiBrowser:
         before = self.scroll_metrics()
         factor = 1.0 if amount == "page" else 0.5
         sign = 1 if direction == "down" else -1
-        page.run_js(
+        self._run_js(
             f"""
             return (() => {{
               const h = window.innerHeight || document.documentElement.clientHeight;
@@ -467,8 +622,7 @@ class WikiBrowser:
             f"https://translate.google.com/translate?sl=auto"
             f"&tl={quote(target_lang)}&u={quote(current, safe='')}"
         )
-        page.get(wrapped)
-        self._wait_ready(1.0)
+        self._navigate(wrapped, settle=1.0)
         self._translated = True
         self._href_to_id.clear()
         self._registry.clear()

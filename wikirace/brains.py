@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import time
 from abc import ABC, abstractmethod
 from typing import Any
 
@@ -25,6 +26,16 @@ SCORE_TOP = float(len(SCORE_LEVELS) - 1)
 
 class Brain(ABC):
     name: str
+
+    def reset_episode(self) -> None:
+        """Clear policy memory before a new task in a shared suite."""
+        self._deadline: float | None = None
+
+    def set_deadline(self, deadline: float | None) -> None:
+        self._deadline = deadline
+
+    def close(self) -> None:
+        """Release episode resources, if the policy owns any."""
 
     @abstractmethod
     def choose(self, state: RaceState) -> tuple[Action, dict]:
@@ -58,6 +69,10 @@ class _ScoreBookBrain(Brain):
     """Shared page/episode score memory + finalist helpers."""
 
     def __init__(self) -> None:
+        self.reset_episode()
+
+    def reset_episode(self) -> None:
+        super().reset_episode()
         self._page_title: str | None = None
         self._page_scores: dict[str, LinkScore] = {}
         self._episode_scores: dict[str, LinkScore] = {}
@@ -98,7 +113,7 @@ class _ScoreBookBrain(Brain):
 
     def _score_viewport_heuristic(self, state: RaceState) -> list[LinkScore]:
         out: list[LinkScore] = []
-        for c in state.viewport:
+        for c in (state.candidates if state.observation_mode == "page" else state.viewport):
             out.append(
                 LinkScore(
                     id=c.id,
@@ -194,6 +209,11 @@ class OverlapBrain(_ScoreBookBrain):
         scores_dump: list[dict],
         score_dbg: dict,
     ) -> tuple[Action, dict]:
+        if state.observation_mode == "page":
+            if not state.candidates:
+                return Action(action="click", link_id=""), {"fail_reason": "page_links_empty"}
+            best = max(state.candidates, key=lambda c: c.score or 0)
+            return Action(action="click", link_id=best.id), {"policy": "page_heuristic"}
 
         finalist = bool(state.action.finalist_mode) or (
             state.source in ("browser", "live_browser")
@@ -299,20 +319,51 @@ class JevBrain(_ScoreBookBrain):
         super().__init__()
         self.model = model
         self.api_key = os.environ["TYPESAFE_API_KEY"]
-        self.base = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai")
+        self.base = os.environ.get("TYPESAFE_BASE_URL", "https://api.typesafe.ai").rstrip("/")
+        self._client: httpx.Client | None = None
+
+    def close(self) -> None:
+        if self._client is not None:
+            self._client.close()
+            self._client = None
 
     def _post(self, payload: dict[str, Any], timeout: float = 60.0) -> dict[str, Any]:
-        with httpx.Client(timeout=timeout) as client:
-            r = client.post(
-                f"{self.base}/v1/systemone",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json",
-                },
-                json=payload,
-            )
-            r.raise_for_status()
-            return r.json()
+        """Reuse connections; retry transient failures within the episode budget."""
+        started = time.perf_counter()
+        for attempt in range(3):
+            remaining = None if self._deadline is None else self._deadline - time.perf_counter()
+            if remaining is not None and remaining <= 0:
+                raise TimeoutError("episode_deadline_exceeded")
+            request_timeout = min(timeout, remaining) if remaining is not None else timeout
+            if self._client is None:
+                self._client = httpx.Client(timeout=timeout)
+            try:
+                response = self._client.post(
+                    f"{self.base}/v1/systemone",
+                    headers={"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"},
+                    json=payload,
+                    timeout=request_timeout,
+                )
+                response.raise_for_status()
+                data = response.json()
+                data["_transport"] = {
+                    "attempts": attempt + 1,
+                    "elapsed_ms": round((time.perf_counter() - started) * 1000),
+                }
+                return data
+            except httpx.HTTPStatusError as exc:
+                if exc.response.status_code not in (429, 502, 503, 504, 529) or attempt == 2:
+                    raise
+            except httpx.TransportError:
+                self.close()
+                if attempt == 2:
+                    raise
+            delay = 0.5 * (2 ** attempt)
+            remaining = None if self._deadline is None else self._deadline - time.perf_counter()
+            if remaining is not None and remaining <= delay:
+                raise TimeoutError("episode_deadline_exceeded")
+            time.sleep(delay)
+        raise AssertionError("unreachable")
 
     def _score_viewport(self, state: RaceState) -> tuple[list[LinkScore], dict]:
         """Score ALL visible candidates for bridge relevance (loop SCORE_BATCH chunks)."""
@@ -403,6 +454,9 @@ class JevBrain(_ScoreBookBrain):
         return scored, {"score_request": payload, "score_response": data}
 
     def _score_viewport_for_env(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        if state.observation_mode == "page":
+            from wikirace.page_policy import score_page
+            return score_page(self, state)
         return self._score_viewport(state)
 
     def choose(self, state: RaceState) -> tuple[Action, dict]:
@@ -415,7 +469,10 @@ class JevBrain(_ScoreBookBrain):
         scores_dump: list[dict],
         score_dbg: dict,
     ) -> tuple[Action, dict]:
-
+        if state.observation_mode == "page":
+            from wikirace.page_policy import choose_page
+            action, debug = choose_page(self, state)
+            return action, {**score_dbg, **debug}
         finalist = bool(state.action.finalist_mode) or (
             state.source in ("browser", "live_browser")
             and not state.action.can_scroll_down

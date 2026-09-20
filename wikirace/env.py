@@ -24,6 +24,8 @@ EXTRACT_CACHE_CHARS = EXTRACT_CHARS  # same length cap as goal / page intro extr
 MAX_RECOVERY_SCROLLS = 20
 # Top-K highest-scored links forced at page bottom (finalist mode).
 FINALIST_K = 5
+PAGE_CHOICE_LIMIT = 255
+PAGE_SHORTLIST_K = 64
 
 
 @dataclass
@@ -65,6 +67,8 @@ class RaceEnv:
     wiki: WikiSource | None = None
     browser: WikiBrowser | None = None
     lang: str = "en"
+    observation_mode: str = "viewport"
+    _page_links_cache: list[Candidate] | None = field(default=None, init=False)
     current: str = ""
     path: list[str] = field(default_factory=list)
     step_count: int = 0  # total actions (clicks + scrolls + translates + recovery)
@@ -99,6 +103,9 @@ class RaceEnv:
         return self.source in ("browser", "live_browser") and self.browser is not None
 
     def reset(self) -> RaceState:
+        if self.observation_mode not in {"viewport", "page"}:
+            raise ValueError(f"unknown_observation_mode:{self.observation_mode}")
+        self._page_links_cache = None
         self.current = self.start
         self.path = [self.start]
         self.step_count = 0
@@ -254,6 +261,20 @@ class RaceEnv:
         state = self._last_state
         if state is None:
             return self.observe()
+        if state.observation_mode == "page":
+            eligible = self._filter_visited(self._annotate_scores(state.page_links))
+            if len(eligible) > PAGE_CHOICE_LIMIT:
+                if any(self._score_key(c.title) not in self._page_scores for c in eligible):
+                    raise RuntimeError("incomplete_page_scores")
+                eligible = sorted(
+                    eligible, key=lambda c: (self._goal_reached(c.title), c.score or 0),
+                    reverse=True,
+                )[:PAGE_SHORTLIST_K]
+            state = state.model_copy(update={
+                "candidates": eligible, "page_scores": list(self._page_scores.values()),
+            })
+            self._last_state = state
+            return state
 
         viewport = self._annotate_scores(list(self._curr_viewport or state.viewport))
         if self._curr_viewport or self._prev_viewport:
@@ -328,6 +349,7 @@ class RaceEnv:
         return finalists
 
     def _clear_page_books(self) -> None:
+        self._page_links_cache = None
         self._page_scores = {}
         self.page_scroll_count = 0
         self._prev_viewport = []
@@ -376,6 +398,8 @@ class RaceEnv:
         return items
 
     def observe(self) -> RaceState:
+        if self.is_browser and self.observation_mode == "page":
+            return self._observe_page()
         can_down, _can_up = self._scroll_flags()
         if self.max_steps <= 0:
             remaining: int | None = None
@@ -506,6 +530,30 @@ class RaceEnv:
         self._last_state = state
         return state
 
+    def _observe_page(self) -> RaceState:
+        """All rendered article anchors, without scrolling or the viewport cap."""
+        assert self.browser is not None
+        meta = self.browser.current_meta()
+        self.current = meta["title"] or self.current
+        if self._page_links_cache is None:
+            self._page_links_cache = [
+                Candidate(id=c.id, title=c.title, url=c.href, text=c.text,
+                          context=c.context, position="rendered_article")
+                for c in self.browser.observe_links(scope="page")
+            ]
+        remaining = None if self.max_steps <= 0 else self.max_steps - self.step_count
+        state = RaceState(
+            goal=PageRef(title=self.goal, description=self._ensure_goal_extract()),
+            current=PageRef(title=self.current, description=meta.get("extract", "")[:EXTRACT_CACHE_CHARS]),
+            source=self.source, observation_mode="page", page_links=list(self._page_links_cache),
+            candidates=self._filter_visited(self._page_links_cache),
+            action=ActionState(path=list(self.path), step=self.step_count, max_steps=self.max_steps,
+                               remaining_steps=remaining, can_scroll_down=False, finalist_mode=False),
+            history=list(self.path), step=self.step_count, max_steps=self.max_steps,
+        )
+        self._last_state = state
+        return state
+
     def _rotate_viewport_memory(self) -> None:
         """After a scroll, current becomes previous for the next observe."""
         self._prev_viewport = list(self._curr_viewport)
@@ -529,6 +577,9 @@ class RaceEnv:
 
         if action.action == "click":
             return self._step_click(action, state)
+        if state.observation_mode == "page":
+            return StepResult(False, None, "page_mode_click_only", failed=True, action=action.action,
+                              actions_consumed=0)
         if action.action == "scroll":
             return self._step_scroll(action, state)
         if action.action == "translate":
@@ -562,7 +613,7 @@ class RaceEnv:
             assert self.browser is not None
             # If remembered but not currently visible, auto-scroll toward it
             # (each recovery scroll counts as one step), then click.
-            if not self.browser.link_in_viewport(link_id):
+            if self.observation_mode == "viewport" and not self.browser.link_in_viewport(link_id):
                 while (
                     not self.browser.link_in_viewport(link_id)
                     and recovery < MAX_RECOVERY_SCROLLS

@@ -1,0 +1,5 @@
+[
+  {"id": "hard-dna", "source": "browser", "start": "DNA", "goal": "Manipuri pony", "max_steps": 0},
+  {"id": "hard-music", "source": "browser", "start": "Music", "goal": "2001 AAA Championships", "max_steps": 0},
+  {"id": "hard-wwii", "source": "browser", "start": "World War II", "goal": "Bald Mountain Recreation Area", "max_steps": 0}
+]

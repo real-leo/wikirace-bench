@@ -3,12 +3,17 @@ from __future__ import annotations
 import json
 import time
 import traceback
+import hashlib
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 from wikirace.brains import Brain
 from wikirace.browser import WikiBrowser
 from wikirace.env import RaceEnv
 from wikirace.wiki import FixtureWiki, LiveWikipedia, WikiSource
+
+DEFAULT_TIMEOUT_S = 600.0
 
 
 def make_wiki(source: str, lang: str = "en") -> WikiSource | None:
@@ -35,25 +40,60 @@ def make_env(
     browser = None
     if source in ("browser", "live_browser"):
         browser = WikiBrowser(lang=lang, headless=headless)
-    return RaceEnv(
-        wiki=wiki,
-        browser=browser,
-        start=task["start"],
-        goal=task["goal"],
-        max_steps=int(task.get("max_steps", 0)),
-        source=source,
-        lang=lang,
-    )
+    try:
+        return RaceEnv(
+            wiki=wiki,
+            browser=browser,
+            start=task["start"],
+            goal=task["goal"],
+            max_steps=int(task.get("max_steps", 0)),
+            source=source,
+            lang=lang,
+            observation_mode=task.get("observation_mode", "page") if browser is not None else "viewport",
+        )
+    except Exception:
+        if browser is not None:
+            browser.close()
+        raise
 
 
 def _episode_base(task: dict, brain: Brain) -> dict:
     return {
         "task_id": task.get("id"),
         "brain": brain.name,
+        "model": getattr(brain, "model", None),
         "start": task.get("start"),
         "goal": task.get("goal"),
         "source": task.get("source", "browser"),
+        "observation_mode": task.get("observation_mode", "page") if task.get("source", "browser") in ("browser", "live_browser") else "all_links",
     }
+
+
+def _api_usage(debug: dict) -> dict:
+    """Count Score/Choice responses without double-counting single-batch aliases."""
+    responses = []
+    if debug.get("score_batches"):
+        responses.extend(b.get("score_response", {}) for b in debug["score_batches"])
+    elif debug.get("score_response"):
+        responses.append(debug["score_response"])
+    if debug.get("response"):
+        responses.append(debug["response"])
+    return {
+        "requests": len(responses),
+        "attempts": sum(int(r.get("_transport", {}).get("attempts", 1)) for r in responses),
+        "input_tokens": sum(int(r.get("usage", {}).get("input_tokens", 0)) for r in responses),
+        "output_tokens": sum(int(r.get("usage", {}).get("output_tokens", 0)) for r in responses),
+        "models": sorted({str(r["model"]) for r in responses if r.get("model")}),
+    }
+
+
+def _code_fingerprint() -> str:
+    digest = hashlib.sha256()
+    root = Path(__file__).resolve().parents[1]
+    for path in sorted((root / "wikirace").glob("*.py")) + [root / "run.py"]:
+        digest.update(path.name.encode())
+        digest.update(path.read_bytes())
+    return digest.hexdigest()
 
 
 def run_episode(
@@ -61,175 +101,191 @@ def run_episode(
     brain: Brain,
     lang: str = "en",
     headless: bool = True,
-    timeout_s: float | None = 120.0,
+    timeout_s: float | None = DEFAULT_TIMEOUT_S,
 ) -> dict:
-    """Run one race.
+    """Score, refresh offered links, then choose; preserve evidence on every exit.
 
-    Result fields:
-      status, path, steps (total actions), clicks, scrolls, seconds, reason
+    The action timeout starts after setup, as in previous releases. Setup and
+    end-to-end time are reported separately. An in-flight call may finish after
+    the deadline, but no further action is started once it has expired.
     """
+    started_at = datetime.now(timezone.utc).isoformat()
+    total_t0 = time.perf_counter()
+    metadata = {
+        **_episode_base(task, brain),
+        "run_id": uuid.uuid4().hex,
+        "started_at": started_at,
+        "code_fingerprint": _code_fingerprint(),
+        "lang": lang,
+        "headless": headless,
+    }
+    env = None
+    state = None
+    trace = []
+    status, reason, error_stack = "running", "", None
+    error_diagnostics = None
+    setup_navigation = None
+    stage = "setup"
+    setup_seconds = 0.0
+    action_t0 = None
+    max_seconds = timeout_s if timeout_s is not None else task.get("timeout_s")
+    if max_seconds is not None:
+        max_seconds = float(max_seconds)
+    metadata["timeout_s"] = max_seconds
+
+    def expired() -> bool:
+        return (
+            action_t0 is not None and max_seconds is not None
+            and time.perf_counter() - action_t0 >= max_seconds
+        )
+
     try:
+        brain.reset_episode()
         env = make_env(task, lang=lang, headless=headless)
-    except Exception as exc:
-        return {
-            **_episode_base(task, brain),
-            "status": "error",
-            "reason": f"setup:{type(exc).__name__}: {exc}",
-            "steps": 0,
-            "clicks": 0,
-            "scrolls": 0,
-            "path": [],
-            "seconds": 0.0,
-            "trace": [],
-            "error_stack": traceback.format_exc(),
-        }
-    try:
+        if env.browser is not None:
+            setup_navigation = getattr(env.browser, "last_navigation", None)
         state = env.observe()
+        if state.observation_mode == "page" and brain.name not in {"jev", "overlap"}:
+            raise ValueError("page_mode_supports_jev_and_overlap: use observation_mode=viewport for other brains")
+        setup_seconds = time.perf_counter() - total_t0
+        action_t0 = time.perf_counter()
+        deadline = None if max_seconds is None else action_t0 + max_seconds
+        brain.set_deadline(deadline)
+        if env.browser is not None and hasattr(env.browser, "set_deadline"):
+            env.browser.set_deadline(deadline)
         if env._goal_reached(state.current.title):
-            return {
-                **_episode_base(task, brain),
-                "start": task["start"],
-                "goal": task["goal"],
-                "status": "success",
-                "reason": "already_on_goal",
-                "steps": 0,
-                "clicks": 0,
-                "scrolls": 0,
-                "path": env.path,
-                "seconds": 0.0,
-                "trace": [],
-                "error_stack": None,
-            }
-
-        trace = []
-        t0 = time.time()
-        status = "running"
-        reason = ""
-        max_seconds = timeout_s
-        if max_seconds is None and task.get("timeout_s") is not None:
-            max_seconds = float(task["timeout_s"])
-        elif max_seconds is None:
-            max_seconds = None
-        else:
-            max_seconds = float(max_seconds)
-
-        while True:
-            if max_seconds is not None and (time.time() - t0) >= max_seconds:
+            status, reason = "success", "already_on_goal"
+        while status == "running":
+            if expired():
                 status, reason = "fail", "timeout"
-                trace.append(
-                    {
-                        "step": state.step,
-                        "current": state.current.title,
-                        "n_viewport": len(state.viewport),
-                        "n_memory": len(state.memory),
-                        "can_scroll_down": state.action.can_scroll_down,
-                        "can_scroll_up": state.action.can_scroll_up,
-                        "finalist_mode": bool(state.action.finalist_mode),
-                        "page_scroll_count": state.action.page_scroll_count,
-                        "action": None,
-                        "chosen_title": None,
-                        "latency_ms": 0,
-                        "error": "timeout",
-                        "brain_debug_keys": [],
-                    }
-                )
                 break
-
-            step_t0 = time.time()
-            scores: list = []
+            step_t0 = time.perf_counter()
+            entry = {
+                "step": state.step,
+                "current": state.current.title,
+                "n_viewport": len(state.viewport),
+                "n_page_links": len(state.page_links),
+                "n_eligible_links": len(state.candidates),
+                "n_memory": len(state.memory),
+                "can_scroll_down": state.action.can_scroll_down,
+                "finalist_mode": state.action.finalist_mode,
+                "page_scroll_count": state.action.page_scroll_count,
+                "observation": state.to_public_dict(),
+                "action": None,
+                "chosen_title": None,
+                "actions_consumed": 0,
+                "recovery_scrolls": 0,
+                "error": None,
+                "brain_debug": {},
+            }
+            trace.append(entry)
             try:
-                # Two-phase: score → ingest → refresh finalists → choose.
-                # Ensures last-viewport scores (e.g. goal link) enter finalist Choice.
+                stage = "score"
+                phase_t0 = time.perf_counter()
                 scores, score_dbg = brain.score_only(state)
+                entry["score_ms"] = round((time.perf_counter() - phase_t0) * 1000)
+                entry["brain_debug"].update(score_dbg)
+                entry["scores"] = scores
                 if scores:
                     env.ingest_scores(scores)
-                    state = env.refresh_finalists()
+                state = env.refresh_finalists()
+                entry["observation"] = state.to_public_dict()
+                entry["n_choice_candidates"] = len(state.candidates)
+                if expired():
+                    status, reason = "fail", "timeout"
+                    break
+                stage = "choice"
+                phase_t0 = time.perf_counter()
                 action, debug = brain.choose_action(state)
-                debug = {**score_dbg, **debug}
-                if scores and "scores" not in debug:
-                    debug["scores"] = scores
-                err = None
-            except Exception as exc:
-                action, debug, err = None, {}, f"{type(exc).__name__}: {exc}"
-            moved = None
-            action_dict = None
-            # Idempotent re-ingest for legacy single-phase brains that only score in choose.
-            if debug.get("scores"):
-                try:
+                entry["choice_ms"] = round((time.perf_counter() - phase_t0) * 1000)
+                entry["brain_debug"].update(debug)
+                entry["finalist_mode_fired"] = bool(debug.get("finalist_mode"))
+                entry["proposed_action"] = action.to_public_dict()
+                if expired():
+                    status, reason = "fail", "timeout"
+                    break
+                if debug.get("fail_reason"):
+                    status, reason = "fail", str(debug["fail_reason"])
+                    break
+                # Legacy policies may return scores with their action.
+                if debug.get("scores"):
                     env.ingest_scores(debug["scores"])
-                except Exception:
-                    pass
-            if err:
-                status, reason = "error", err
-            elif debug.get("fail_reason"):
-                status, reason = "fail", str(debug["fail_reason"])
-            else:
-                assert action is not None
-                action_dict = action.to_public_dict()
+                stage = "execute"
+                phase_t0 = time.perf_counter()
+                entry["action"] = action.to_public_dict()
                 moved = env.step(action)
+                entry.update({
+                    "execution_ms": round((time.perf_counter() - phase_t0) * 1000),
+                    "chosen_title": moved.title if moved.ok else None,
+                    "chosen_score": env.last_chosen_score if action.action == "click" else None,
+                    "actions_consumed": moved.actions_consumed,
+                    "recovery_scrolls": moved.recovery_scrolls,
+                    "move_reason": moved.reason,
+                })
                 if not moved.ok or moved.failed:
-                    status = "fail"
-                    reason = moved.reason
+                    status, reason = "fail", moved.reason
+                elif expired():
+                    status, reason = "fail", "timeout"
                 elif moved.done:
-                    status = "success"
-                    reason = moved.reason
-            trace.append(
-                {
-                    "step": state.step,
-                    "current": state.current.title,
-                    "n_viewport": len(state.viewport),
-                    "n_memory": len(state.memory),
-                    "can_scroll_down": state.action.can_scroll_down,
-                    "can_scroll_up": state.action.can_scroll_up,
-                    "finalist_mode": bool(state.action.finalist_mode),
-                    "page_scroll_count": state.action.page_scroll_count,
-                    "action": action_dict,
-                    "chosen_title": None if not moved or not moved.ok else moved.title,
-                    "chosen_score": debug.get("chosen_score"),
-                    "latency_ms": int((time.time() - step_t0) * 1000),
-                    "error": err,
-                    "brain_debug_keys": list(debug.keys()),
-                    "recovery_scrolls": getattr(moved, "recovery_scrolls", 0) if moved else 0,
-                    "actions_consumed": getattr(moved, "actions_consumed", 1) if moved else 0,
-                    "steps_so_far": env.step_count,
-                    "clicks_so_far": env.click_count,
-                    "scrolls_so_far": env.scroll_count,
-                    "finalist_mode_fired": bool(debug.get("finalist_mode")),
-                }
-            )
-            if status != "running":
-                break
-            state = env.observe()
-        metrics = {}
-        try:
-            metrics = env.score_metrics()
-        except Exception:
-            metrics = {}
-        finalist_fired = any(bool(t.get("finalist_mode_fired") or t.get("finalist_mode")) for t in trace)
-        return {
-            **_episode_base(task, brain),
-            "start": task["start"],
-            "goal": task["goal"],
-            "status": status,
-            "reason": reason,
-            "steps": env.step_count,
-            "clicks": env.click_count,
-            "scrolls": env.scroll_count,
-            "path": env.path,
-            "seconds": round(time.time() - t0, 3),
-            "chosen_score": metrics.get("chosen_score"),
-            "max_score": metrics.get("max_score"),
-            # avg_score = mean over all scored titles this episode (not path-only).
-            "avg_score": metrics.get("avg_score"),
-            "avg_score_scope": metrics.get("avg_score_scope", "all_scored_titles"),
-            "avg_clicked_score": metrics.get("avg_clicked_score"),
-            "finalist_picks": metrics.get("finalist_picks", 0),
-            "finalist_mode_fired": finalist_fired,
-            "trace": trace,
-            "error_stack": traceback.format_exc() if status == "error" else None,
-        }
+                    status, reason = "success", moved.reason
+                if status == "running":
+                    stage = "observe"
+                    phase_t0 = time.perf_counter()
+                    state = env.observe()
+                    entry["observe_ms"] = round((time.perf_counter() - phase_t0) * 1000)
+            except Exception as exc:
+                entry["brain_debug"].update(getattr(exc, "brain_debug", {}))
+                err = f"{stage}:{type(exc).__name__}: {exc}"
+                status, reason = ("fail", "timeout") if expired() else ("error", err)
+                error_stack = traceback.format_exc()
+                entry["error"] = err
+                error_diagnostics = getattr(exc, "diagnostics", None)
+                entry["error_diagnostics"] = error_diagnostics
+            finally:
+                if entry["action"] and entry["action"].get("action") in ("click", "translate") and env.browser is not None:
+                    entry["navigation"] = getattr(env.browser, "last_navigation", None)
+                entry["latency_ms"] = round((time.perf_counter() - step_t0) * 1000)
+                entry["stopped_stage"] = stage if status != "running" else None
+                entry["api_usage"] = _api_usage(entry["brain_debug"])
+                entry["steps_so_far"] = env.step_count
+                entry["clicks_so_far"] = env.click_count
+                entry["scrolls_so_far"] = env.scroll_count
+    except Exception as exc:
+        status, reason = "error", f"{stage}:{type(exc).__name__}: {exc}"
+        error_stack = traceback.format_exc()
+        error_diagnostics = getattr(exc, "diagnostics", None)
     finally:
-        env.close()
+        finished_t = time.perf_counter()
+        if action_t0 is None:
+            setup_seconds = finished_t - total_t0
+        if env is not None:
+            env.close()
+        brain.close()
+
+    metrics = env.score_metrics() if env is not None else {}
+    usage = {key: sum(t.get("api_usage", {}).get(key, 0) for t in trace)
+             for key in ("requests", "attempts", "input_tokens", "output_tokens")}
+    usage["models"] = sorted({m for t in trace for m in t.get("api_usage", {}).get("models", [])})
+    return {
+        **metadata,
+        "status": status,
+        "reason": reason,
+        "steps": env.step_count if env else 0,
+        "clicks": env.click_count if env else 0,
+        "scrolls": env.scroll_count if env else 0,
+        "path": env.path if env else [],
+        "seconds": round(finished_t - action_t0, 3) if action_t0 is not None else 0.0,
+        "setup_seconds": round(setup_seconds, 3),
+        "setup_navigation": setup_navigation,
+        "total_seconds": round(finished_t - total_t0, 3),
+        "goal_description": state.goal.description if state else None,
+        **metrics,
+        "api_usage": usage,
+        "finalist_mode_fired": any(t.get("finalist_mode_fired") or t.get("finalist_mode") for t in trace),
+        "trace": trace,
+        "error_stack": error_stack,
+        "error_diagnostics": error_diagnostics,
+    }
 
 
 def summarize(rows: list[dict]) -> dict:
@@ -271,7 +327,7 @@ def run_suite(
     out_path: Path,
     lang: str = "en",
     headless: bool = True,
-    timeout_s: float | None = 120.0,
+    timeout_s: float | None = DEFAULT_TIMEOUT_S,
 ) -> list[dict]:
     rows = []
     out_path.parent.mkdir(parents=True, exist_ok=True)

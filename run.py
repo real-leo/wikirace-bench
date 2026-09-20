@@ -13,14 +13,14 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from wikirace.brains import build_brain
-from wikirace.eval import run_episode, run_suite, summarize
+from wikirace.eval import DEFAULT_TIMEOUT_S, run_episode, run_suite, summarize
 
 load_dotenv(ROOT / ".env")
 
 
 @click.group()
 def cli() -> None:
-    """Wikipedia WikiRace bench (equal-cost scroll/click, viewport + memory)."""
+    """Wikipedia WikiRace: whole-page links by default; optional viewport mode."""
 
 
 @cli.command()
@@ -41,10 +41,12 @@ def cli() -> None:
     help="Soft step budget shown in observation only (0=unlimited). Never fails the episode.",
 )
 @click.option("--lang", default="en", help="Wikipedia language code")
+@click.option("--out", default=None, type=click.Path(dir_okay=False), help="Save the full episode JSON, including decision evidence.")
 @click.option("--headless/--headed", default=True, help="Chromium headless (default true)")
+@click.option("--observation", "observation_mode", default="page", type=click.Choice(["page", "viewport"]), show_default=True, help="page=all rendered article links, click only (Jev/overlap); viewport=scroll/click")
 @click.option(
     "--timeout",
-    default=180.0,
+    default=DEFAULT_TIMEOUT_S,
     type=float,
     show_default=True,
     help="Wall-clock episode timeout in seconds (fail reason=timeout). 0=disable.",
@@ -58,6 +60,8 @@ def play(
     lang: str,
     headless: bool,
     timeout: float,
+    out: str | None,
+    observation_mode: str,
 ) -> None:
     task = {
         "id": "adhoc",
@@ -65,11 +69,16 @@ def play(
         "start": start,
         "goal": goal,
         "max_steps": max_steps,
+        "observation_mode": observation_mode,
     }
     timeout_s = None if timeout <= 0 else timeout
     row = run_episode(
         task, build_brain(brain), lang=lang, headless=headless, timeout_s=timeout_s
     )
+    if out:
+        output = Path(out)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(row, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({k: row[k] for k in row if k != "trace"}, ensure_ascii=False, indent=2))
     print("path:", " → ".join(row["path"]))
     print(
@@ -91,6 +100,7 @@ def play(
 @click.option("--out", default=str(ROOT / "runs" / "latest.jsonl"))
 @click.option("--lang", default="en")
 @click.option("--headless/--headed", default=True)
+@click.option("--observation", "observation_mode", default="page", type=click.Choice(["page", "viewport"]), show_default=True)
 @click.option(
     "--source",
     default=None,
@@ -99,7 +109,7 @@ def play(
 )
 @click.option(
     "--timeout",
-    default=180.0,
+    default=DEFAULT_TIMEOUT_S,
     type=float,
     show_default=True,
     help="Wall-clock episode timeout in seconds (fail reason=timeout). 0=disable.",
@@ -112,8 +122,11 @@ def bench(
     headless: bool,
     source: str | None,
     timeout: float,
+    observation_mode: str,
 ) -> None:
     task_list = json.loads(Path(tasks).read_text())
+    for task in task_list:
+        task["observation_mode"] = observation_mode
     if source:
         for t in task_list:
             t["source"] = source

@@ -1,0 +1,261 @@
+{
+  "method": "Full rendered article links, page-target-v1; <=255 direct Choice, >255 all-link Score batches of 64 then top-64 Choice.",
+  "limitations": [
+    "One run per task, not a repeated-trial success estimate.",
+    "Changed observation and prompt together; not an isolated prompt comparison.",
+    "Unknown exact official demo prompt/filters; implementation follows only its public architecture."
+  ],
+  "regression_tests_passed": 39,
+  "checks": "all offered ids/URLs legal; every large-page eligible link scored; zero scroll; HTTP 200 after all 11 clicks; no logged API key; current code fingerprint matches runs",
+  "runs": [
+    {
+      "task_id": "hard-music",
+      "run_id": "2a179a0f34e340068dd5548729cb81c1",
+      "started_at": "2026-09-20T13:06:17.134094+00:00",
+      "status": "success",
+      "reason": "reached_goal",
+      "start": "Music",
+      "goal": "2001 AAA Championships",
+      "observation_mode": "page",
+      "timeout_s": 600.0,
+      "steps": 6,
+      "clicks": 6,
+      "scrolls": 0,
+      "seconds": 129.529,
+      "setup_seconds": 55.971,
+      "total_seconds": 185.5,
+      "path": [
+        "Music",
+        "Performing arts",
+        "Entertainment",
+        "Sport",
+        "Sport of athletics",
+        "AAA Championships",
+        "2001 AAA Championships"
+      ],
+      "api_usage": {
+        "requests": 43,
+        "attempts": 43,
+        "input_tokens": 840893,
+        "output_tokens": 45423,
+        "models": [
+          "jev-1.13.0"
+        ]
+      },
+      "code_fingerprint": "783f5e7acf7cf50433ae894ce6410ac36e8bf96bbce33632cc8ba8a06ed35e38",
+      "log": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round4-page/jev-hard-music.json",
+      "pages": [
+        {
+          "current": "Music",
+          "chosen_title": "Performing arts",
+          "n_page_links": 734,
+          "n_eligible_links": 733,
+          "n_choice_candidates": 64,
+          "score_ms": 17471,
+          "choice_ms": 488,
+          "execution_ms": 14184,
+          "observe_ms": 577
+        },
+        {
+          "current": "Performing arts",
+          "chosen_title": "Entertainment",
+          "n_page_links": 249,
+          "n_eligible_links": 247,
+          "n_choice_candidates": 247,
+          "score_ms": 0,
+          "choice_ms": 2595,
+          "execution_ms": 11563,
+          "observe_ms": 1467
+        },
+        {
+          "current": "Entertainment",
+          "chosen_title": "Sport",
+          "n_page_links": 805,
+          "n_eligible_links": 802,
+          "n_choice_candidates": 64,
+          "score_ms": 24596,
+          "choice_ms": 777,
+          "execution_ms": 6315,
+          "observe_ms": 250
+        },
+        {
+          "current": "Sport",
+          "chosen_title": "Sport of athletics",
+          "n_page_links": 291,
+          "n_eligible_links": 289,
+          "n_choice_candidates": 64,
+          "score_ms": 12872,
+          "choice_ms": 562,
+          "execution_ms": 10045,
+          "observe_ms": 686
+        },
+        {
+          "current": "Sport of athletics",
+          "chosen_title": "AAA Championships",
+          "n_page_links": 393,
+          "n_eligible_links": 391,
+          "n_choice_candidates": 64,
+          "score_ms": 10188,
+          "choice_ms": 531,
+          "execution_ms": 6875,
+          "observe_ms": 142
+        },
+        {
+          "current": "AAA Championships",
+          "chosen_title": "2001 AAA Championships",
+          "n_page_links": 248,
+          "n_eligible_links": 247,
+          "n_choice_candidates": 247,
+          "score_ms": 0,
+          "choice_ms": 3519,
+          "execution_ms": 3774,
+          "observe_ms": null
+        }
+      ],
+      "phase_seconds": {
+        "score_ms": 65.127,
+        "choice_ms": 8.472,
+        "execution_ms": 52.756,
+        "observe_ms": 3.122
+      }
+    },
+    {
+      "task_id": "hard-wwii",
+      "run_id": "c139d0b53e3c441887315f639e1ce162",
+      "started_at": "2026-09-20T13:06:17.150918+00:00",
+      "status": "success",
+      "reason": "reached_goal",
+      "start": "World War II",
+      "goal": "Bald Mountain Recreation Area",
+      "observation_mode": "page",
+      "timeout_s": 600.0,
+      "steps": 4,
+      "clicks": 4,
+      "scrolls": 0,
+      "seconds": 152.224,
+      "setup_seconds": 56.323,
+      "total_seconds": 208.548,
+      "path": [
+        "World War II",
+        "United States",
+        "Michigan",
+        "List of Michigan state parks",
+        "Bald Mountain Recreation Area"
+      ],
+      "api_usage": {
+        "requests": 73,
+        "attempts": 73,
+        "input_tokens": 1570495,
+        "output_tokens": 77290,
+        "models": [
+          "jev-1.13.0"
+        ]
+      },
+      "code_fingerprint": "783f5e7acf7cf50433ae894ce6410ac36e8bf96bbce33632cc8ba8a06ed35e38",
+      "log": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round4-page/jev-hard-wwii.json",
+      "pages": [
+        {
+          "current": "World War II",
+          "chosen_title": "United States",
+          "n_page_links": 1149,
+          "n_eligible_links": 1148,
+          "n_choice_candidates": 64,
+          "score_ms": 23230,
+          "choice_ms": 499,
+          "execution_ms": 16325,
+          "observe_ms": 1529
+        },
+        {
+          "current": "United States",
+          "chosen_title": "Michigan",
+          "n_page_links": 1835,
+          "n_eligible_links": 1833,
+          "n_choice_candidates": 64,
+          "score_ms": 43036,
+          "choice_ms": 561,
+          "execution_ms": 10931,
+          "observe_ms": 644
+        },
+        {
+          "current": "Michigan",
+          "chosen_title": "List of Michigan state parks",
+          "n_page_links": 1033,
+          "n_eligible_links": 1030,
+          "n_choice_candidates": 64,
+          "score_ms": 24960,
+          "choice_ms": 962,
+          "execution_ms": 10795,
+          "observe_ms": 127
+        },
+        {
+          "current": "List of Michigan state parks",
+          "chosen_title": "Bald Mountain Recreation Area",
+          "n_page_links": 304,
+          "n_eligible_links": 302,
+          "n_choice_candidates": 64,
+          "score_ms": 8108,
+          "choice_ms": 483,
+          "execution_ms": 9941,
+          "observe_ms": null
+        }
+      ],
+      "phase_seconds": {
+        "score_ms": 99.334,
+        "choice_ms": 2.505,
+        "execution_ms": 47.992,
+        "observe_ms": 2.3
+      }
+    },
+    {
+      "task_id": "adhoc",
+      "run_id": "b7d602319474473082374a5a37c61051",
+      "started_at": "2026-09-20T13:06:18.324058+00:00",
+      "status": "success",
+      "reason": "reached_goal",
+      "start": "U.S. state",
+      "goal": "Michigan",
+      "observation_mode": "page",
+      "timeout_s": 120.0,
+      "steps": 1,
+      "clicks": 1,
+      "scrolls": 0,
+      "seconds": 32.245,
+      "setup_seconds": 51.304,
+      "total_seconds": 83.55,
+      "path": [
+        "U.S. state",
+        "Michigan"
+      ],
+      "api_usage": {
+        "requests": 8,
+        "attempts": 8,
+        "input_tokens": 159159,
+        "output_tokens": 8151,
+        "models": [
+          "jev-1.13.0"
+        ]
+      },
+      "code_fingerprint": "783f5e7acf7cf50433ae894ce6410ac36e8bf96bbce33632cc8ba8a06ed35e38",
+      "log": "/Volumes/MachineU1/github_work/wikirace-bench/runs/page-michigan-smoke.json",
+      "pages": [
+        {
+          "current": "U.S. state",
+          "chosen_title": "Michigan",
+          "n_page_links": 440,
+          "n_eligible_links": 439,
+          "n_choice_candidates": 64,
+          "score_ms": 12667,
+          "choice_ms": 523,
+          "execution_ms": 19048,
+          "observe_ms": null
+        }
+      ],
+      "phase_seconds": {
+        "score_ms": 12.667,
+        "choice_ms": 0.523,
+        "execution_ms": 19.048,
+        "observe_ms": 0.0
+      }
+    }
+  ]
+}

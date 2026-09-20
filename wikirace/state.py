@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class Candidate(BaseModel):
-    """Public candidate offered to the brain (no real href)."""
+    """Public candidate; page mode also supplies the observed URL."""
 
     id: str
     title: str
@@ -17,6 +17,7 @@ class Candidate(BaseModel):
     extract: str = ""
     # Best bridge-relevance score seen so far (optional in observation)
     score: float | None = None
+    url: str = ""  # populated for rendered full-page article links
 
 
 class LinkScore(BaseModel):
@@ -65,7 +66,8 @@ class RaceState(BaseModel):
     - viewport: links visible in the current browser viewport (main content)
     - memory: union of current + previous screen links (v1, no extra model filter)
     - offered click ids = viewport ∪ memory (normal), or top-K finalists (bottom)
-    Real hrefs stay in the executor only.
+    - page mode: page_links contains the rendered article links and URLs;
+      candidates is the eligible set or the scored shortlist, with clicks only.
     """
 
     task: str = "wikirace"
@@ -75,6 +77,8 @@ class RaceState(BaseModel):
     memory: list[Candidate] = Field(default_factory=list)
     action: ActionState = Field(default_factory=ActionState)
     source: str = "browser"
+    observation_mode: Literal["viewport", "page"] = "viewport"
+    page_links: list[Candidate] = Field(default_factory=list)
 
     # Convenience mirrors (also in action) for older brains / dumps
     history: list[str] = Field(default_factory=list)
@@ -109,7 +113,7 @@ class RaceState(BaseModel):
 
     def to_public_dict(self) -> dict[str, Any]:
         """Observation payload for LLM / Jev (no href)."""
-        return {
+        result = {
             "task": self.task,
             "goal": {
                 "title": self.goal.title,
@@ -163,7 +167,12 @@ class RaceState(BaseModel):
                 "finalist_k": self.action.finalist_k,
             },
             "source": self.source,
+            "observation_mode": self.observation_mode,
         }
+        if self.observation_mode == "page":
+            result["page_links"] = [c.model_dump() for c in self.page_links]
+            result["offered_links"] = [c.model_dump() for c in self.candidates]
+        return result
 
 
 ActionName = Literal["click", "scroll", "translate"]

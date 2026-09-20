@@ -1,0 +1,185 @@
+[
+  {
+    "round": "round1",
+    "task": "DNA → Manipuri pony",
+    "file": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round1/jev-hard-dna.json",
+    "run_id": "a17451dad70e491a93ead4b2414a1a6b",
+    "code_fingerprint": "a94afe7150b41a47df03d06e1bd35d5d2400de86c17156d687d8dd6826667c32",
+    "status": "error",
+    "reason": "score:ConnectError: [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1010)",
+    "steps": 24,
+    "clicks": 22,
+    "scrolls": 2,
+    "seconds": 254.712,
+    "setup_seconds": 54.522,
+    "total_seconds": 309.233,
+    "finalist_picks": 0,
+    "api_usage": {
+      "requests": 58,
+      "input_tokens": 203942,
+      "output_tokens": 12399,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "phase_seconds": {
+      "score_ms": 92.721,
+      "choice_ms": 60.919,
+      "execution_ms": 83.038,
+      "observe_ms": 12.828
+    }
+  },
+  {
+    "round": "round1",
+    "task": "Music → 2001 AAA Championships",
+    "file": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round1/jev-hard-music.json",
+    "run_id": "515cf1bbdff74f7898a9e2b272fcd25c",
+    "code_fingerprint": "a94afe7150b41a47df03d06e1bd35d5d2400de86c17156d687d8dd6826667c32",
+    "status": "fail",
+    "reason": "timeout",
+    "steps": 37,
+    "clicks": 22,
+    "scrolls": 15,
+    "seconds": 300.527,
+    "setup_seconds": 54.886,
+    "total_seconds": 355.413,
+    "finalist_picks": 0,
+    "api_usage": {
+      "requests": 76,
+      "input_tokens": 266133,
+      "output_tokens": 15923,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "phase_seconds": {
+      "score_ms": 108.476,
+      "choice_ms": 82.732,
+      "execution_ms": 98.079,
+      "observe_ms": 11.204
+    }
+  },
+  {
+    "round": "round1",
+    "task": "World War II → Bald Mountain Recreation Area",
+    "file": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round1/jev-hard-wwii.json",
+    "run_id": "b032016ff37e4a839a5f3bb4e227a786",
+    "code_fingerprint": "a94afe7150b41a47df03d06e1bd35d5d2400de86c17156d687d8dd6826667c32",
+    "status": "fail",
+    "reason": "timeout",
+    "steps": 31,
+    "clicks": 20,
+    "scrolls": 11,
+    "seconds": 300.188,
+    "setup_seconds": 54.052,
+    "total_seconds": 354.24,
+    "finalist_picks": 0,
+    "api_usage": {
+      "requests": 75,
+      "input_tokens": 286066,
+      "output_tokens": 17397,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "phase_seconds": {
+      "score_ms": 120.192,
+      "choice_ms": 78.17,
+      "execution_ms": 84.523,
+      "observe_ms": 17.264
+    }
+  },
+  {
+    "round": "round2",
+    "task": "DNA → Manipuri pony",
+    "file": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round2/jev-hard-dna.json",
+    "run_id": "236fee8fdfef407faa40f2cac777b817",
+    "code_fingerprint": "e447cc4ef6c402afd3acf8755a763f0519d84d27369feec8c8bff35051a0371d",
+    "status": "success",
+    "reason": "reached_goal",
+    "steps": 62,
+    "clicks": 49,
+    "scrolls": 13,
+    "seconds": 285.447,
+    "setup_seconds": 54.631,
+    "total_seconds": 340.078,
+    "finalist_picks": 0,
+    "api_usage": {
+      "requests": 158,
+      "attempts": 158,
+      "input_tokens": 660547,
+      "output_tokens": 39963,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "phase_seconds": {
+      "score_ms": 84.763,
+      "choice_ms": 33.307,
+      "execution_ms": 145.963,
+      "observe_ms": 21.355
+    }
+  },
+  {
+    "round": "round2",
+    "task": "Music → 2001 AAA Championships",
+    "file": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round2/jev-hard-music.json",
+    "run_id": "e3198ee6c17f410e9b926f49893a569c",
+    "code_fingerprint": "e447cc4ef6c402afd3acf8755a763f0519d84d27369feec8c8bff35051a0371d",
+    "status": "fail",
+    "reason": "timeout",
+    "steps": 53,
+    "clicks": 36,
+    "scrolls": 17,
+    "seconds": 306.784,
+    "setup_seconds": 55.741,
+    "total_seconds": 362.525,
+    "finalist_picks": 0,
+    "api_usage": {
+      "requests": 124,
+      "attempts": 124,
+      "input_tokens": 464381,
+      "output_tokens": 27905,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "phase_seconds": {
+      "score_ms": 74.144,
+      "choice_ms": 30.508,
+      "execution_ms": 171.04,
+      "observe_ms": 19.991
+    }
+  },
+  {
+    "round": "round2",
+    "task": "World War II → Bald Mountain Recreation Area",
+    "file": "/Volumes/MachineU1/github_work/wikirace-bench/runs/round2/jev-hard-wwii.json",
+    "run_id": "304bac4b72984aa293f5700051e22cc1",
+    "code_fingerprint": "e447cc4ef6c402afd3acf8755a763f0519d84d27369feec8c8bff35051a0371d",
+    "status": "error",
+    "reason": "execute:RuntimeError: wikipedia_page_unavailable:https://en.wikipedia.org/wiki/Pontiac,_Michigan",
+    "steps": 59,
+    "clicks": 40,
+    "scrolls": 19,
+    "seconds": 278.219,
+    "setup_seconds": 55.634,
+    "total_seconds": 333.853,
+    "finalist_picks": 1,
+    "api_usage": {
+      "requests": 131,
+      "attempts": 131,
+      "input_tokens": 486340,
+      "output_tokens": 28875,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "phase_seconds": {
+      "score_ms": 67.351,
+      "choice_ms": 30.49,
+      "execution_ms": 151.333,
+      "observe_ms": 22.42
+    }
+  }
+]

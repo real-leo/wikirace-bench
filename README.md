@@ -1,112 +1,105 @@
-# WikiRace Bench (scroll-down + scored finalists)
+# WikiRace Bench (whole-page links + click choice)
 
-Viewport Wikipedia WikiRace eval. Measures whether a model can decide **when information is enough to click now** versus **scrolling for better candidates**, with **graded bridge-relevance scores** and a forced **finalist pick** at page bottom.
+Wikipedia link-navigation evaluation. The default browser mode collects all
+**rendered article links on the current page**, then asks the model to choose
+one link to click. It does not scroll through viewports or make a separate
+model decision for each screen.
 
-The **model** chooses scroll-down or click — the executor never decides scrolling for it (no Noul gate). **SCROLL_UP is not offered** (recovery scrolls for off-screen memory clicks remain executor-only).
+## Default observation: `--observation page`
 
-## Eval goal
+Each page visit collects its links once from the rendered article DOM:
 
-Minimize total actions to reach the goal article. Scroll-down and click are **equal cost** in metrics (`steps` / `clicks` / `scrolls` / `seconds`). Episodes do **not** fail on step count: `--max-steps 0` (default) means unlimited; a positive value is soft info in the observation only (`remaining_steps`).
+- Include off-screen article links and rendered infobox, table and navigation-box links.
+- Exclude hidden elements, other origins, non-article namespaces and same-page fragments.
+- Deduplicate by destination URL; filter previously visited or blocked destinations.
+- Preserve each candidate's stable id, article title, actual URL and short local context.
+- Supply the goal title and intro, current title and intro, and the last six visited titles.
 
-## Observation (each step)
+This does not expand collapsed sections, load linked articles in advance or
+provide full article text. “Whole-page” means rendered links in the article
+container, including those below the current viewport. No physical scroll to
+the bottom is necessary.
 
-The brain receives:
+## Jev selection policy
 
-1. **Goal**: `title` + short `description` (Wikipedia intro extract, same source/length as page extracts — not a title echo)
-2. **Current viewport**: visible article links in **main content only** (deduped; nav / sidebar / footer / infobox / references excluded). Each candidate: `id`, `title`, short **sentence context**, optional `score`. Real `href` stays in the executor only.
-3. **Candidate memory (v1)**: union of links from **current screen + previous screen**.
-4. **Action state**: `path`, `step`, `max_steps` (0=unlimited), `remaining_steps` (null when unlimited), `can_scroll_down`, `page_scroll_count`, `finalist_mode`, `finalist_k`
-5. **Finalists** (when `finalist_mode`): top-K highest-scored links seen while on the **current page**
+| Eligible links | Model calls | Offered click choices |
+|---|---|---|
+| 1–255 | One Choice call | Every eligible link |
+| More than 255 | Score every eligible link in batches of at most 64 questions, then one Choice call | Highest-scoring 64 links |
+| 0 | End with `page_links_empty` | None |
 
-Offered click ids = viewport ∪ memory in normal mode, or **only top-K finalists** at page bottom.
+Large pages are **not truncated before scoring**. Every eligible link must
+receive a valid score before ranking; missing answers fail explicitly. An exact
+goal link, if present, is retained in the shortlist. The model still chooses the
+click. Batches run sequentially and the episode deadline applies throughout.
 
-Example (abridged):
+The `page-target-v1` prompt focuses on the identity of the destination: its
+location, organization, event series or other distinguishing facts. A shared
+word such as “mountain” is weak evidence by itself. Specific relevant lists and
+concrete connections receive stronger scores; broad hubs are allowed when they
+provide a credible route. There is no instruction to click early or scroll.
 
-```json
-{
-  "goal": {"title": "Caffeine", "description": "A central nervous system stimulant of the methylxanthine class…"},
-  "current": {"title": "Coffee", "description": "Coffee is a beverage…"},
-  "viewport": [
-    {"id": "L001", "title": "Caffeine", "context": "…contains the stimulant caffeine…", "position": "current_viewport|scrollY=0", "score": 0.95}
-  ],
-  "memory": [
-    {"id": "L001", "title": "Caffeine", "context": "…", "position": "current_viewport|scrollY=0", "score": 0.95}
-  ],
-  "finalists": [],
-  "action": {
-    "path": ["Coffee"],
-    "step": 0,
-    "max_steps": 0,
-    "remaining_steps": null,
-    "can_scroll_down": true,
-    "page_scroll_count": 0,
-    "finalist_mode": false,
-    "finalist_k": 5
-  }
-}
-```
+Scores use five levels (0–4, normalized to 0–1): unrelated/conflicting entity;
+generic topic overlap; plausible broad hub; specific bridge; exact target or
+closely connected index. They are ranking hints, not success probabilities.
 
-## Relevance scoring
+The two-stage design follows TypeSafe's [public Wikiracing description](https://typesafe.ai/blog/introducing-system-one-models-and-jev):
+score large candidate sets, then use Choice within its 255-option limit.
+The official demo's complete prompt, DOM filters and shortlist size have not
+been published in the sources reviewed. This repository's prompt, 64-link
+shortlist, context format and visited-page filtering are our implementation;
+this is not an exact reproduction of the demo.
 
-Each step, brains score visible candidates as **bridges toward the goal** (not writing quality):
+## Actions and metrics
 
-| Level | Meaning |
-|-------|---------|
-| 0 | Irrelevant / misleading |
-| 1 | Weak / tangential |
-| 2 | Reasonable bridge |
-| 3 | Strong bridge |
-| 4 | Direct / near-direct / is the goal |
+In page mode the only model action is `click` with an offered `link_id`.
+Off-screen anchors can be clicked directly without recovery scrolling.
+`steps == clicks`, `scrolls == 0`, and page-bottom finalist mode is unused.
+Scoring calls consume time and tokens, but are not graph hops.
 
-Scores are normalized to **0–1** and persisted per link title (keep **highest** across the episode; page book resets on navigation). Jev uses TypeSafe **Score** (batch per viewport). Overlap uses token-overlap heuristics on the same scale.
+Episodes stop on reaching the goal, illegal actions, errors or the wall-clock
+limit (`--timeout 600` by default). `--max-steps 0` means unlimited; a positive
+value remains soft observation information rather than a termination rule.
+The action-loop timeout starts after browser and goal setup; outputs separately
+report `seconds`, `setup_seconds` and `total_seconds`.
 
-## Actions (equal cost)
+Results record the mode, path, clicks, elapsed time, model version and code
+fingerprint. Each trace includes `n_page_links`, `n_eligible_links`,
+`n_choice_candidates`, offered URLs, Score/Choice payloads and responses,
+`prompt_version`, phase timing and returned API token usage. Completed scoring
+batches remain logged if a later API call fails or times out.
 
-| Action | Effect | Cost |
-|--------|--------|------|
-| `click` `link_id` | Must be in the offered set. | **1 step** (+ recovery scrolls if off-screen) |
-| `scroll` `down` | Page (or half) scroll; refreshes viewport + memory. | **1 step** |
-| `translate` (optional) | Google Translate wrapper of current URL. | **1 step** |
+`avg_score` averages all scored titles, not route quality. `avg_clicked_score`
+averages clicked links with scores. Direct Choice on a small page has no Score
+call, so its chosen score can be null. `finalist_picks` refers only to legacy
+viewport mode, not the page-mode shortlist.
 
-Rules:
+## Legacy viewport mode
 
-- **No SCROLL_UP** for the model. Executor may still scroll up when recovering an off-screen memory click.
-- Equal-cost **accounting** only: clicks + scrolls + recovery scrolls + translate all increment `steps` for reporting — they do **not** stop the episode.
-- At **page bottom** (`can_scroll_down=false`): enter **finalist mode**. Observation includes `page_scroll_count` and **top-K** (default K=5) highest-scored links seen on this page. Choice is **only** among those ids (no scroll). If top-K is empty → fail `finalist_empty`.
-- **Off-screen memory click**: executor auto-scrolls toward the remembered position; each recovery scroll counts as one step, then the click costs one more.
-- **Termination**: (1) reached goal → success; (2) illegal action → fail; (3) wall-clock `--timeout` (default 180s; use 300s for hard races) → `reason=timeout`; (4) `finalist_empty`. There is **no** `max_steps` fail and **no** scroll-oscillation detector.
+Use `--observation viewport` to reproduce the earlier scroll/click task:
 
-```json
-{"action": "click", "link_id": "L001"}
-{"action": "scroll", "direction": "down", "amount": "page"}
-```
+- Observe current-screen article links plus the previous screen's memory.
+- Score links, then choose click or `SCROLL_DOWN`; no model `SCROLL_UP`.
+- At the page bottom, choose among the current page's five highest-scored links.
+- Off-screen memory clicks may require executor recovery scrolls.
+- Each click, scroll, recovery scroll and optional translation costs one step.
 
-## Brains / prompts
+The previous viewport prompt and narrower link filters are preserved. Page and
+viewport mode expose different information and action spaces; compare success,
+clicks, time and API usage with the mode clearly stated. Their total step counts
+are not an equivalent benchmark of model ability.
 
-| Name | Notes |
-|------|--------|
-| `overlap` | Heuristic bridge scores; scrolls down if best is near-zero; at bottom clicks best of top-K |
-| `jev` | TypeSafe **Score** (bridge relevance) + **Choice** over candidate ids + `SCROLL_DOWN`; finalist Choice among top-K |
-| `laya` | Local **Laya** Score + Choice (same semantics as jev; `USE_TF=0`, English checkpoint) |
-| `gpt` / `deepseek` / `claude` | JSON action from LLM system prompt (scroll-down + finalist instructions) |
+## Brains
 
-Jev prompts emphasize:
+| Name | Supported browser modes |
+|---|---|
+| `jev` | Page (default): Score when needed, then Choice; legacy viewport |
+| `overlap` | Page and viewport, using token-overlap heuristics |
+| `laya` | Viewport only; local Score + Choice, requires `laya` and `USE_TF=0` |
+| `gpt` / `deepseek` / `claude` | Viewport only; JSON actions |
 
-- Score = bridge relevance toward the goal.
-- Scroll-down and click each cost one step; minimize total actions.
-- Finalist: “you have scrolled N times; pick the best remaining candidate.”
-
-## Metrics
-
-Episode output:
-
-- `status`, `path`, `steps`, `clicks`, `scrolls`, `seconds`, `reason`
-- `chosen_score`, `max_score`, `avg_score`, `avg_clicked_score`, `finalist_picks`, `finalist_mode_fired`
-
-**Score honesty:** `avg_score` is the mean over **all scored titles** this episode (`avg_score_scope=all_scored_titles`), not a path-quality metric. Use `avg_clicked_score` (mean bridge score of links actually clicked) when judging path quality.
-
-**Finalist ranking (each step):** observe → `brain.score_only` → `env.ingest_scores` → `env.refresh_finalists` → `brain.choose_action`. Top-K is over **all** scored links on the **current page** after excluding visited/blocked titles (never by recycled link ids). No whole-episode timeout teleport.
-
+Pass `--observation viewport` explicitly for brains without a page policy.
+Fixture and MediaWiki API sources retain their existing non-browser behavior.
 
 ## Install
 
@@ -121,6 +114,65 @@ cp .env.example .env   # fill TYPESAFE_API_KEY for jev; overlap needs none
 
 Needs Chromium/Chrome. Headless default; use `--headed` to watch. CI / sandbox usually needs `--no-sandbox` (already set in `WikiBrowser`).
 
+### Local setup with uv (tested on macOS)
+
+```bash
+uv venv --python 3.12 .venv
+uv pip sync --python .venv/bin/python requirements.lock.txt
+cp .env.example .env   # only for a new checkout; preserve an existing .env
+```
+
+Set `TYPESAFE_API_KEY` in `.env`. macOS Chrome and Linux Chrome/Chromium are
+detected automatically. Set `WIKIRACE_BROWSER_PATH` for another executable.
+If this network requires a proxy, set `WIKIRACE_BROWSER_PROXY` explicitly;
+Chromium does not inherit the shell's `HTTPS_PROXY`. Do not put credentials in
+the browser proxy URL. `.env`, `.venv/`, and `runs/` are ignored by Git.
+
+```bash
+.venv/bin/python -m pytest -q tests
+.venv/bin/python run.py play --brain jev --source browser \
+  --start Coffee --goal Caffeine --timeout 45 --out runs/coffee-caffeine.json
+.venv/bin/python run.py bench --brains jev --tasks data/tasks_hard.json \
+  --timeout 600 --out runs/hard.jsonl
+```
+
+`play --out` preserves the complete episode. Each step records the observation,
+offered candidates, scores, Score/Choice requests and responses (without auth
+headers), phase timings, token usage, and execution result. Episodes include a
+run id, UTC start time, code fingerprint, configured/resolved model versions,
+and goal description. `seconds` retains the action-loop timing used by earlier
+runs; `setup_seconds` and `total_seconds` also expose browser/goal preparation.
+The timeout prevents further decisions or actions after expiry, but an
+in-flight request/navigation may finish after the deadline.
+
+Navigation waits for a **new document** with a parsed Wikipedia article and
+heading, stable for 0.5 seconds. Browser scripts use the current JavaScript
+context so an old document handle cannot masquerade as a loaded page.
+The per-attempt navigation limit is 30 seconds, capped by the remaining episode
+budget. One reload of the same selected URL is allowed for a navigation timeout,
+selected transient network errors, or HTTP 500/502/503/504; HTTP 403/404/429 are
+reported immediately. Reloads consume elapsed time and appear in
+`trace[].navigation.attempts`; they do not add a model decision or graph hop.
+The trace includes URL, HTTP status (when Chromium exposes it), document state,
+browser error code, and a short error-page excerpt. Setup navigation is saved
+separately. No whole-page article text is added to the model observation.
+
+Network/browser failures are `error` results with a saved traceback, rather
+than empty finalist losses. A failed episode does not abort the batch. Policy
+score memory resets between tasks, including consecutive tasks with the same
+starting page. The tests include one live MediaWiki intro smoke check; other
+regressions use deterministic transports and do not call Jev.
+
+Jev reuses its HTTP connection pool within an episode. Transient transport
+errors, rate limits and temporary gateway/overload responses are retried at
+most twice, with backoff and the remaining episode time as a limit. Invalid
+credentials and request-validation errors are not retried. `api_usage` reports
+usage returned by completed API responses; usage for requests that never
+returned a response is unknown. Retries can consume additional API tokens.
+
+TypeSafe documentation snapshots and source links are in `docs/reference/`.
+They are reference documents only; no agent skill or plugin is installed.
+
 ## Quick start
 
 ```bash
@@ -129,20 +181,20 @@ PYTHONPATH=. python run.py play \
   --brain overlap --source browser --lang en \
   --start Coffee --goal Caffeine
 
-# Jev (TypeSafe Score + Choice, finalist at bottom)
+# Jev (whole-page candidates; Score when needed, then Choice)
 PYTHONPATH=. python run.py play \
   --brain jev --source browser \
   --start "Rubber duck" --goal Bathing --timeout 180
 
 # Laya (local Score + Choice; needs `pip install laya`, USE_TF=0)
 USE_TF=0 PYTHONPATH=. python run.py play \
-  --brain laya --source browser \
+  --brain laya --source browser --observation viewport \
   --start "Rubber duck" --goal Bathing --timeout 300
 
-# Harder race (higher wall-clock safety timeout)
+# Harder race (10-minute wall-clock safety timeout)
 PYTHONPATH=. python run.py play \
   --brain jev --source browser \
-  --start Tea --goal Moon --timeout 300
+  --start Tea --goal Moon --timeout 600
 ```
 
 Batch:
@@ -160,7 +212,8 @@ run.py play|bench
   --headless / --headed
   --brain / --brains
   --start --goal --max-steps 0
-  --timeout 180
+  --observation page|viewport  # default: page (browser)
+  --timeout 600
 ```
 
 ## Directory
@@ -173,10 +226,11 @@ wikirace-bench/
   data/tasks.json
   data/fixture_wiki.json
   wikirace/
-    browser.py   # DrissionPage + viewport links + sentence context
+    browser.py   # DrissionPage + page/viewport links + local context
     state.py     # RaceState / Action / Candidate / LinkScore
-    env.py       # RaceEnv (scores, finalist mode, recovery scrolls)
+    env.py       # RaceEnv (page shortlist + legacy viewport actions)
     brains.py    # Overlap + Jev/Laya (Score/Choice) + LLM brains
+    page_policy.py # Jev whole-page Score/Choice prompt
     wiki.py
     eval.py
 ```

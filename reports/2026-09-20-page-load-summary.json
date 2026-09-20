@@ -1,0 +1,128 @@
+[
+  {
+    "task_id": "hard-music",
+    "start": "Music",
+    "goal": "2001 AAA Championships",
+    "run_id": "be7a42b93b25443aacd367e6ed26f2ef",
+    "started_at": "2026-09-20T12:22:44.543733+00:00",
+    "code_fingerprint": "28145e0c629e7c8ad97ab14c3a6f4b85a85059928dcdff7459e252e4cc9ac94f",
+    "status": "fail",
+    "reason": "timeout",
+    "steps": 146,
+    "clicks": 71,
+    "scrolls": 75,
+    "seconds": 600.124,
+    "setup_seconds": 40.548,
+    "total_seconds": 640.672,
+    "finalist_picks": 2,
+    "api_usage": {
+      "requests": 341,
+      "attempts": 341,
+      "input_tokens": 1493950,
+      "output_tokens": 86708,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "path_tail": [
+      "Federalism",
+      "Government",
+      "State (polity)",
+      "Country",
+      "Country (disambiguation)",
+      "Kingdom of the Netherlands",
+      "Netherlands",
+      "European Union",
+      "Enlargement of the European Union",
+      "Brexit",
+      "Law of the United Kingdom",
+      "England and Wales"
+    ],
+    "checkpoint_300s": {
+      "current": "Department for Digital, Culture, Media and Sport",
+      "chosen_title": "Sport in the United Kingdom",
+      "steps": 68,
+      "elapsed": 303.116
+    },
+    "completed_navigations": 72,
+    "navigation_retries": 0,
+    "navigation_failures": [],
+    "phase_seconds": {
+      "score_ms": 183.038,
+      "choice_ms": 77.326,
+      "execution_ms": 320.612,
+      "observe_ms": 18.879
+    },
+    "navigation_ms_median": 3147.5,
+    "navigation_ms_max": 14206,
+    "goal_description": "The 2001 AAA Championships sponsored by Norwich Union, was an outdoor track and field competition organised by the Amateur Athletic Association (AAA), held from 13–15 July at Alexander Stadium in Birmingham, England. It was considered the de facto national championships for the U"
+  },
+  {
+    "task_id": "hard-wwii",
+    "start": "World War II",
+    "goal": "Bald Mountain Recreation Area",
+    "run_id": "25d8a371745b43a4b9b6a86a98eaa2ec",
+    "started_at": "2026-09-20T12:22:45.707812+00:00",
+    "code_fingerprint": "28145e0c629e7c8ad97ab14c3a6f4b85a85059928dcdff7459e252e4cc9ac94f",
+    "status": "fail",
+    "reason": "timeout",
+    "steps": 126,
+    "clicks": 94,
+    "scrolls": 32,
+    "seconds": 600.12,
+    "setup_seconds": 39.64,
+    "total_seconds": 639.76,
+    "finalist_picks": 0,
+    "api_usage": {
+      "requests": 288,
+      "attempts": 288,
+      "input_tokens": 1101499,
+      "output_tokens": 63682,
+      "models": [
+        "jev-1.13.0"
+      ]
+    },
+    "path_tail": [
+      "Grand Canyon",
+      "Grand Canyon National Park",
+      "Arizona",
+      "National park",
+      "Nature park",
+      "IUCN protected area categories",
+      "International Union for Conservation of Nature",
+      "Nature conservation",
+      "Conservation movement",
+      "Wilderness",
+      "Recreation",
+      "Leisure"
+    ],
+    "checkpoint_300s": {
+      "current": "List of national parks of the United States",
+      "chosen_title": "Protected area",
+      "steps": 61,
+      "elapsed": 300.232
+    },
+    "completed_navigations": 95,
+    "navigation_retries": 0,
+    "navigation_failures": [
+      {
+        "attempt": 1,
+        "status": "error",
+        "reason": "navigation_timeout",
+        "page": {
+          "diagnostic_error": "invalid_browser_snapshot"
+        },
+        "elapsed_ms": 1061
+      }
+    ],
+    "phase_seconds": {
+      "score_ms": 155.938,
+      "choice_ms": 72.098,
+      "execution_ms": 362.07,
+      "observe_ms": 8.662
+    },
+    "navigation_ms_median": 2806,
+    "navigation_ms_max": 15407,
+    "goal_description": "Bald Mountain State Recreation Area is a 4,637-acre (1,877 ha) state park located near Lake Orion, Michigan off M-24. It consists of some of the most rugged terrain in southeastern Michigan. The recreation area is composed of a North Unit and a South Unit, which are not contiguou"
+  }
+]
