@@ -178,7 +178,13 @@ class OverlapBrain(_ScoreBookBrain):
                 },
             )
 
-        offered = state.candidates
+        hist = {_title_key(t) for t in (state.history or state.action.path or [])}
+        goal_key = _title_key(state.goal.title)
+        offered = [
+            c
+            for c in state.candidates
+            if _title_key(c.title) not in hist or _title_key(c.title) == goal_key
+        ] or list(state.candidates)
         if not offered:
             if state.action.can_scroll_down:
                 return (
@@ -361,7 +367,11 @@ class JevBrain(_ScoreBookBrain):
         page_scrolls: int,
     ) -> tuple[Action, dict]:
         criteria: dict[str, Any] = {}
+        hist = {_title_key(t) for t in (state.history or state.action.path or [])}
+        goal_key = _title_key(state.goal.title)
         for c in top:
+            if _title_key(c.title) in hist and _title_key(c.title) != goal_key:
+                continue
             criteria[c.id] = {
                 "title": c.title,
                 "context": (c.context or c.text or "")[:240],
@@ -371,7 +381,19 @@ class JevBrain(_ScoreBookBrain):
                     f"(bridge score {c.score if c.score is not None else 'n/a'})."
                 ),
             }
-        payload = {
+        if not criteria:
+            # All top-K were visited; fall back to raw top so we can still move.
+            for c in top:
+                criteria[c.id] = {
+                    "title": c.title,
+                    "context": (c.context or c.text or "")[:240],
+                    "score": c.score,
+                    "what": (
+                        f"Click the Wikipedia link titled {c.title!r} "
+                        f"(bridge score {c.score if c.score is not None else 'n/a'})."
+                    ),
+                }
+                payload = {
             "model": self.model,
             "state": {
                 "task": "wikirace_finalist",
@@ -452,7 +474,11 @@ class JevBrain(_ScoreBookBrain):
         score_dbg: dict,
     ) -> tuple[Action, dict]:
         criteria: dict[str, Any] = {}
+        hist = {_title_key(t) for t in (state.history or state.action.path or [])}
+        goal_key = _title_key(state.goal.title)
         for c in state.candidates:
+            if _title_key(c.title) in hist and _title_key(c.title) != goal_key:
+                continue
             pos = c.position or "current_viewport"
             in_view = "current_viewport" in pos
             key = _title_key(c.title)

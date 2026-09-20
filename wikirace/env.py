@@ -155,6 +155,17 @@ class RaceEnv:
     def _score_key(self, title: str) -> str:
         return normalize_wiki_title(title).lower()
 
+    def _is_visited(self, title: str) -> bool:
+        """True if title is already on the path (normalized). Goal is never 'visited' for filtering."""
+        if self._goal_reached(title):
+            return False
+        key = self._score_key(title)
+        return any(self._score_key(p) == key for p in self.path)
+
+    def _filter_visited(self, cands: list[Candidate]) -> list[Candidate]:
+        """Drop already-visited pages from offered clicks (keep goal)."""
+        return [c for c in cands if not self._is_visited(c.title)]
+
     def ingest_scores(self, scores: list[dict] | list[LinkScore]) -> None:
         """Merge scores into page + episode books, keeping the highest per title."""
         for raw in scores:
@@ -305,6 +316,11 @@ class RaceEnv:
             finalist_mode = not can_down
             finalists = self._finalist_candidates(memory) if finalist_mode else []
             offered = finalists if finalist_mode else memory
+            # Block path ping-pong: do not re-offer already-visited pages (except goal).
+            offered = self._filter_visited(offered)
+            if finalist_mode:
+                finalists = self._filter_visited(finalists)
+                offered = finalists
 
             action_state = ActionState(
                 path=list(self.path),
@@ -359,6 +375,7 @@ class RaceEnv:
                 )
             )
         candidates = self._annotate_scores(candidates)
+        candidates = self._filter_visited(candidates)
         action_state = ActionState(
             path=list(self.path),
             step=self.step_count,
