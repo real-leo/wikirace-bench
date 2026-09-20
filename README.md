@@ -87,6 +87,7 @@ Rules:
 |------|--------|
 | `overlap` | Heuristic bridge scores; scrolls down if best is near-zero; at bottom clicks best of top-K |
 | `jev` | TypeSafe **Score** (bridge relevance) + **Choice** over candidate ids + `SCROLL_DOWN`; finalist Choice among top-K |
+| `laya` | Local **Laya** Score + Choice (same semantics as jev; `USE_TF=0`, English checkpoint) |
 | `gpt` / `deepseek` / `claude` | JSON action from LLM system prompt (scroll-down + finalist instructions) |
 
 Jev prompts emphasize:
@@ -114,6 +115,7 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env   # fill TYPESAFE_API_KEY for jev; overlap needs none
+# for --brain laya: pip install laya  (and USE_TF=0)
 ```
 
 Needs Chromium/Chrome. Headless default; use `--headed` to watch. CI / sandbox usually needs `--no-sandbox` (already set in `WikiBrowser`).
@@ -130,6 +132,11 @@ PYTHONPATH=. python run.py play \
 PYTHONPATH=. python run.py play \
   --brain jev --source browser \
   --start "Rubber duck" --goal Bathing --timeout 180
+
+# Laya (local Score + Choice; needs `pip install laya`, USE_TF=0)
+USE_TF=0 PYTHONPATH=. python run.py play \
+  --brain laya --source browser \
+  --start "Rubber duck" --goal Bathing --timeout 300
 
 # Harder race (higher wall-clock safety timeout)
 PYTHONPATH=. python run.py play \
@@ -168,7 +175,7 @@ wikirace-bench/
     browser.py   # DrissionPage + viewport links + sentence context
     state.py     # RaceState / Action / Candidate / LinkScore
     env.py       # RaceEnv (scores, finalist mode, recovery scrolls)
-    brains.py    # Overlap + Jev (Score/Choice) + LLM brains
+    brains.py    # Overlap + Jev/Laya (Score/Choice) + LLM brains
     wiki.py
     eval.py
 ```

@@ -3,3 +3,5 @@ pydantic>=2.0
 python-dotenv>=1.0
 click>=8.1
 DrissionPage>=4.0
+# optional local System-1 brain (CPU): pip install laya
+# laya==0.3.4

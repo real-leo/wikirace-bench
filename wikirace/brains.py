@@ -794,6 +794,8 @@ def build_brain(kind: str) -> Brain:
         return OverlapBrain()
     if kind == "jev":
         return JevBrain(os.environ.get("JEV_MODEL", "jev-latest"))
+    if kind == "laya":
+        return LayaBrain(os.environ.get("LAYA_MODEL", "convaiinnovations/laya"))
     if kind == "gpt":
         return OpenAICompatBrain(
             name="gpt",
@@ -811,3 +813,431 @@ def build_brain(kind: str) -> Brain:
     if kind == "claude":
         return AnthropicBrain(os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-5"))
     raise ValueError(f"unknown brain: {kind}")
+
+# ---------------------------------------------------------------------------
+# Laya (local System-1; same Score + Choice semantics as JevBrain)
+# ---------------------------------------------------------------------------
+
+_LAYA_AGENT = None
+
+
+def _get_laya_agent():
+    """Lazy singleton: load English checkpoint once (CPU-friendly, USE_TF=0)."""
+    global _LAYA_AGENT
+    if _LAYA_AGENT is not None:
+        return _LAYA_AGENT
+    # Must be set before importing transformers / laya (TF/abseil hang otherwise).
+    os.environ.setdefault("USE_TF", "0")
+    os.environ.setdefault("TRANSFORMERS_NO_TF", "1")
+    os.environ.setdefault("TRANSFORMERS_NO_FLAX", "1")
+    import laya  # noqa: WPS433 — deferred so overlap/jev paths stay light
+
+    model_id = os.environ.get("LAYA_MODEL", "convaiinnovations/laya")
+    _LAYA_AGENT = laya.load(model_id)
+    return _LAYA_AGENT
+
+
+class LayaBrain(_ScoreBookBrain):
+    """Local Laya Score (bridge relevance) + Choice (scroll-down / click / finalist).
+
+    Mirrors JevBrain observation/action/finalist semantics for fair comparison.
+    Uses the local ``laya`` package (lazy singleton, USE_TF=0).
+    """
+
+    name = "laya"
+
+    def __init__(self, model: str | None = None) -> None:
+        super().__init__()
+        self.model = model or os.environ.get("LAYA_MODEL", "convaiinnovations/laya")
+        self._agent = None
+
+    def _agent_or_load(self):
+        if self._agent is None:
+            # Honour per-instance model id via env for the singleton loader.
+            if self.model:
+                os.environ.setdefault("LAYA_MODEL", self.model)
+            self._agent = _get_laya_agent()
+        return self._agent
+
+    def _predict(self, state: dict[str, Any], questions: dict[str, Any]) -> dict[str, Any]:
+        agent = self._agent_or_load()
+        return agent.predict(state, questions)
+
+    def _score_viewport(self, state: RaceState) -> tuple[list[LinkScore], dict]:
+        """Batch Score visible candidates for bridge relevance toward the goal."""
+        to_score = list(state.viewport)[:SCORE_BATCH]
+        if not to_score:
+            return [], {}
+
+        questions: dict[str, Any] = {}
+        cand_state: dict[str, Any] = {}
+        for c in to_score:
+            qid = f"score_{c.id}"
+            ctx = (c.context or c.text or c.extract or "")[:240]
+            cand_state[c.id] = {"title": c.title, "context": ctx}
+            questions[qid] = {
+                "type": "score",
+                "instructions": {
+                    "question": (
+                        "How useful is this Wikipedia link as a conceptual bridge "
+                        "toward the goal article?"
+                    ),
+                    "focus": (
+                        "Rate bridge relevance only — not writing quality. "
+                        "A good bridge need not match the goal directly; related "
+                        "topics that shorten the path count. "
+                        f"Goal title: {state.goal.title}."
+                    ),
+                    "candidate_id": c.id,
+                },
+                "criteria": SCORE_LEVELS,
+            }
+
+        score_state = {
+            "task": "wikirace_bridge_relevance",
+            "goal": {
+                "title": state.goal.title,
+                "description": state.goal.description or state.goal.extract,
+            },
+            "current_page": {
+                "title": state.current.title,
+                "description": state.current.description or state.current.extract,
+            },
+            "path": state.action.path or state.history,
+            "candidates": cand_state,
+        }
+        data = self._predict(score_state, questions)
+        answers = data.get("answers") or {}
+        scored: list[LinkScore] = []
+        for c in to_score:
+            ans = answers.get(f"score_{c.id}") or {}
+            raw = float(ans.get("score") or 0.0)
+            norm = raw / SCORE_TOP if SCORE_TOP else 0.0
+            scored.append(
+                LinkScore(
+                    id=c.id,
+                    title=c.title,
+                    context=(c.context or c.text or "")[:240],
+                    score=round(norm, 4),
+                    href_key=_title_key(c.title),
+                )
+            )
+        return scored, {"score_request": {"state": score_state, "questions": questions}, "score_response": data}
+
+    def choose(self, state: RaceState) -> tuple[Action, dict]:
+        self._sync_page(state)
+        scored, score_dbg = self._score_viewport(state)
+        score_dump = self._merge_scores(scored)
+
+        finalist = bool(state.action.finalist_mode) or (
+            state.source in ("browser", "live_browser")
+            and not state.action.can_scroll_down
+        )
+        page_scrolls = state.action.page_scroll_count
+
+        if finalist:
+            top = self._top_k_from_book(state, k=state.action.finalist_k or FINALIST_K)
+            if not top:
+                return (
+                    Action(action="click", link_id=""),
+                    {
+                        "policy": "finalist_empty",
+                        "fail_reason": "finalist_empty",
+                        "scores": score_dump,
+                        "finalist_mode": True,
+                        "page_scroll_count": page_scrolls,
+                        **score_dbg,
+                    },
+                )
+            return self._finalist_choice(state, top, score_dump, score_dbg, page_scrolls)
+
+        return self._normal_choice(state, score_dump, score_dbg)
+
+    def _finalist_choice(
+        self,
+        state: RaceState,
+        top: list[Candidate],
+        score_dump: list[dict],
+        score_dbg: dict,
+        page_scrolls: int,
+    ) -> tuple[Action, dict]:
+        criteria: dict[str, Any] = {}
+        hist = {_title_key(t) for t in (state.history or state.action.path or [])}
+        goal_key = _title_key(state.goal.title)
+        for c in top:
+            if _title_key(c.title) in hist and _title_key(c.title) != goal_key:
+                continue
+            criteria[c.id] = {
+                "title": c.title,
+                "context": (c.context or c.text or "")[:240],
+                "score": c.score,
+                "what": (
+                    f"Click the Wikipedia link titled {c.title!r} "
+                    f"(bridge score {c.score if c.score is not None else 'n/a'})."
+                ),
+            }
+        if not criteria:
+            for c in top:
+                criteria[c.id] = {
+                    "title": c.title,
+                    "context": (c.context or c.text or "")[:240],
+                    "score": c.score,
+                    "what": (
+                        f"Click the Wikipedia link titled {c.title!r} "
+                        f"(bridge score {c.score if c.score is not None else 'n/a'})."
+                    ),
+                }
+        choice_state = {
+            "task": "wikirace_finalist",
+            "goal": {
+                "title": state.goal.title,
+                "description": state.goal.description or state.goal.extract,
+            },
+            "current": {
+                "title": state.current.title,
+                "description": state.current.description or state.current.extract,
+            },
+            "path": state.action.path or state.history,
+            "page_scroll_count": page_scrolls,
+            "finalists": [
+                {
+                    "id": c.id,
+                    "title": c.title,
+                    "context": (c.context or "")[:200],
+                    "score": c.score,
+                }
+                for c in top
+            ],
+        }
+        questions = {
+            "next": {
+                "type": "choice",
+                "instructions": {
+                    "question": (
+                        f"You have scrolled {page_scrolls} times on this page "
+                        "and reached the bottom. Pick the single best remaining "
+                        "candidate to click toward the goal."
+                    ),
+                    "focus": (
+                        "You cannot scroll further. Choose among the top-scored "
+                        "bridge candidates seen while scrolling this page. "
+                        "Prefer the strongest conceptual bridge toward the goal; "
+                        "avoid backtracking to pages already on the path unless "
+                        "no better option exists."
+                    ),
+                    "goal_title": state.goal.title,
+                },
+                "criteria": criteria,
+            }
+        }
+        data = self._predict(choice_state, questions)
+        choice = data["answers"]["next"]["choice"]
+        if choice not in criteria:
+            probs = (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+            ranked = sorted(
+                ((k, v) for k, v in probs.items() if k in criteria),
+                key=lambda kv: kv[1],
+                reverse=True,
+            )
+            choice = ranked[0][0] if ranked else top[0].id
+        chosen = next((c for c in top if c.id == choice), top[0])
+        return (
+            Action(action="click", link_id=choice),
+            {
+                "policy": "finalist_choice",
+                "request": {"state": choice_state, "questions": questions},
+                "response": data,
+                "scores": score_dump,
+                "finalist_mode": True,
+                "finalists": [
+                    {"id": c.id, "title": c.title, "score": c.score} for c in top
+                ],
+                "chosen_score": chosen.score,
+                "page_scroll_count": page_scrolls,
+                **score_dbg,
+            },
+        )
+
+    def _normal_choice(
+        self,
+        state: RaceState,
+        score_dump: list[dict],
+        score_dbg: dict,
+    ) -> tuple[Action, dict]:
+        criteria: dict[str, Any] = {}
+        hist = {_title_key(t) for t in (state.history or state.action.path or [])}
+        goal_key = _title_key(state.goal.title)
+        for c in state.candidates:
+            if _title_key(c.title) in hist and _title_key(c.title) != goal_key:
+                continue
+            pos = c.position or "current_viewport"
+            in_view = "current_viewport" in pos
+            key = _title_key(c.title)
+            sc = self._page_scores.get(key)
+            score_hint = sc.score if sc is not None else c.score
+            criteria[c.id] = {
+                "title": c.title,
+                "context": (c.context or c.text or c.extract or "")[:240],
+                "position": pos,
+                "score": score_hint,
+                "what": (
+                    f"Click the Wikipedia link titled {c.title!r}"
+                    + (
+                        " (currently visible)."
+                        if in_view
+                        else " (remembered from another viewport; executor will "
+                        "scroll back, counting recovery scrolls as steps)."
+                    )
+                    + (
+                        f" Bridge score so far: {score_hint}."
+                        if score_hint is not None
+                        else ""
+                    )
+                ),
+            }
+
+        scroll_keys: list[str] = []
+        if state.source in ("browser", "live_browser") and state.action.can_scroll_down:
+            criteria["SCROLL_DOWN"] = {
+                "title": "(scroll down)",
+                "what": "Scroll one page down to reveal more article links.",
+                "not_for": (
+                    "Do not scroll when a visible or remembered link is already "
+                    "a reasonable bridge toward the goal. Scroll costs one step, "
+                    "same as a click."
+                ),
+            }
+            scroll_keys.append("SCROLL_DOWN")
+
+        if not criteria:
+            return (
+                Action(action="scroll", direction="down", amount="page"),
+                {
+                    "policy": "laya_stuck_empty",
+                    "fail_reason": "stuck_empty",
+                    "scores": score_dump,
+                    **score_dbg,
+                },
+            )
+
+        # Laya head_max_len ~192; keep Choice option count bounded (prefer high scores).
+        MAX_CHOICE = 24
+        if len(criteria) > MAX_CHOICE:
+            scroll_crit = {k: criteria.pop(k) for k in list(scroll_keys) if k in criteria}
+            ranked_ids = sorted(
+                criteria.keys(),
+                key=lambda cid: (
+                    float(criteria[cid].get("score") or -1.0)
+                    if isinstance(criteria[cid], dict)
+                    else -1.0
+                ),
+                reverse=True,
+            )[: MAX_CHOICE - len(scroll_crit)]
+            criteria = {cid: criteria[cid] for cid in ranked_ids}
+            criteria.update(scroll_crit)
+
+        unlimited = state.action.max_steps <= 0
+        remaining = None if unlimited else state.action.remaining_steps
+        remaining_msg = (
+            "No hard step limit — minimize total actions. At page bottom "
+            "SCROLL_DOWN is unavailable and you enter finalist mode."
+            if unlimited
+            else f"Soft remaining steps (info only, not a hard fail): {remaining}."
+        )
+        choice_state = {
+            "task": "wikirace",
+            "goal": {
+                "title": state.goal.title,
+                "description": state.goal.description or state.goal.extract,
+            },
+            "current": {
+                "title": state.current.title,
+                "description": state.current.description or state.current.extract,
+            },
+            "path": state.action.path or state.history,
+            "step": state.action.step,
+            "max_steps": state.action.max_steps,
+            "remaining_steps": remaining,
+            "can_scroll_down": state.action.can_scroll_down,
+            "page_scroll_count": state.action.page_scroll_count,
+            "n_viewport": len(state.viewport),
+            "n_memory": len(state.memory),
+        }
+        questions = {
+            "next": {
+                "type": "choice",
+                "instructions": {
+                    "question": (
+                        "WikiRace: choose the single next action that best "
+                        "progresses toward the goal page while minimizing "
+                        "total actions."
+                    ),
+                    "focus": (
+                        "Scroll-down and click each count as one action; "
+                        "minimize total actions to reach the goal. "
+                        "Scores reflect bridge relevance toward the goal — "
+                        "prefer higher-scored bridges when clicking. "
+                        "A reasonable conceptual bridge is enough; do not wait "
+                        "for a near-synonym. Only scroll if you expect clearly "
+                        "more valuable candidates below. Prefer an early click "
+                        "on a reasonable bridge over waiting. Avoid backtracking "
+                        "to pages already on the path unless stuck. "
+                        + remaining_msg
+                    ),
+                    "goal_title": state.goal.title,
+                },
+                "criteria": criteria,
+            }
+        }
+        data = self._predict(choice_state, questions)
+        choice = data["answers"]["next"]["choice"]
+        if choice == "SCROLL_DOWN":
+            action = Action(action="scroll", direction="down", amount="page")
+            chosen_score = None
+        else:
+            if choice not in {c.id for c in state.candidates}:
+                probs = (
+                    (data.get("answers") or {}).get("next", {}).get("probabilities") or {}
+                )
+                ranked = sorted(
+                    (
+                        (k, v)
+                        for k, v in probs.items()
+                        if k != "SCROLL_DOWN" and k in criteria
+                    ),
+                    key=lambda kv: kv[1],
+                    reverse=True,
+                )
+                choice = ranked[0][0] if ranked else (
+                    state.candidates[0].id if state.candidates else "SCROLL_DOWN"
+                )
+                if choice == "SCROLL_DOWN":
+                    action = Action(action="scroll", direction="down", amount="page")
+                    return action, {
+                        "request": {"state": choice_state, "questions": questions},
+                        "response": data,
+                        "fallback": True,
+                        "scores": score_dump,
+                        "scroll_offered": scroll_keys,
+                        **score_dbg,
+                    }
+            action = Action(action="click", link_id=choice)
+            key = None
+            for c in state.candidates:
+                if c.id == choice:
+                    key = _title_key(c.title)
+                    break
+            chosen_score = (
+                self._page_scores[key].score
+                if key and key in self._page_scores
+                else None
+            )
+        return action, {
+            "request": {"state": choice_state, "questions": questions},
+            "response": data,
+            "scroll_offered": scroll_keys,
+            "scores": score_dump,
+            "chosen_score": chosen_score,
+            "finalist_mode": False,
+            **score_dbg,
+        }

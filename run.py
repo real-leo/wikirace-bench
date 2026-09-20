@@ -24,7 +24,7 @@ def cli() -> None:
 
 
 @cli.command()
-@click.option("--brain", default="overlap", help="overlap,jev,gpt,claude,deepseek")
+@click.option("--brain", default="overlap", help="overlap,jev,laya,gpt,claude,deepseek")
 @click.option("--start", default="Coffee")
 @click.option("--goal", default="Caffeine")
 @click.option(
@@ -86,7 +86,7 @@ def play(
 
 
 @cli.command()
-@click.option("--brains", default="overlap", help="comma list: overlap,jev,gpt,claude,deepseek")
+@click.option("--brains", default="overlap", help="comma list: overlap,jev,laya,gpt,claude,deepseek")
 @click.option("--tasks", default=str(ROOT / "data" / "tasks.json"))
 @click.option("--out", default=str(ROOT / "runs" / "latest.jsonl"))
 @click.option("--lang", default="en")
