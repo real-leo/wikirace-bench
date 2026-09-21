@@ -75,12 +75,12 @@ def play(
     row = run_episode(
         task, build_brain(brain), lang=lang, headless=headless, timeout_s=timeout_s
     )
-    if out:
-        output = Path(out)
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(json.dumps(row, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({k: row[k] for k in row if k != "trace"}, ensure_ascii=False, indent=2))
-    print("path:", " → ".join(row["path"]))
+    def _utf8_safe(s: str) -> str:
+        return s.encode("utf-8", "replace").decode("utf-8")
+
+    summary = {k: row[k] for k in row if k != "trace"}
+    print(_utf8_safe(json.dumps(summary, ensure_ascii=False, indent=2)))
+    print(_utf8_safe("path: " + " → ".join(row["path"])))
     print(
         f"steps={row.get('steps')} clicks={row.get('clicks')} "
         f"scrolls={row.get('scrolls')} seconds={row.get('seconds')}"
@@ -89,9 +89,22 @@ def play(
         print("actions:")
         for t in row["trace"]:
             print(
-                f"  step {t['step']}: {t.get('action')} -> {t.get('chosen_title')} "
-                f"(consumed={t.get('actions_consumed')})"
+                _utf8_safe(
+                    f"  step {t['step']}: {t.get('action')} -> {t.get('chosen_title')} "
+                    f"(consumed={t.get('actions_consumed')})"
+                )
             )
+    if out:
+        output = Path(out)
+        output.parent.mkdir(parents=True, exist_ok=True)
+        payload = _utf8_safe(json.dumps(row, ensure_ascii=False, indent=2))
+        output.write_text(payload, encoding="utf-8")
+        # slim sidecar so metrics survive even if full JSON is huge/problematic
+        slim_path = output.with_suffix(".summary.json")
+        slim_path.write_text(
+            _utf8_safe(json.dumps(summary, ensure_ascii=False, indent=2)),
+            encoding="utf-8",
+        )
 
 
 @cli.command()
