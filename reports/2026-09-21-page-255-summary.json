@@ -1,0 +1,471 @@
+{
+  "runs": [
+    {
+      "brain": "jev",
+      "model": "jev-latest",
+      "run_id": "cf5a0a8f32fb47a1b64f1ea442dcc2f1",
+      "task_id": "hard-dna",
+      "start": "DNA",
+      "goal": "Manipuri pony",
+      "status": "success",
+      "reason": "reached_goal",
+      "clicks": 4,
+      "scrolls": 0,
+      "seconds": 63.26,
+      "setup_seconds": 44.028,
+      "total_seconds": 107.289,
+      "path": [
+        "DNA",
+        "Animal",
+        "Equestrianism",
+        "Polo",
+        "Manipuri pony"
+      ],
+      "api_usage": {
+        "requests": 31,
+        "attempts": 31,
+        "input_tokens": 675639,
+        "output_tokens": 37775,
+        "models": [
+          "jev-1.13.0"
+        ]
+      },
+      "code_fingerprint": "3fa709ed192e1016b5b9a935ef876f97111680378e5acb739f35b4207f9c8d18",
+      "observation_mode": "page",
+      "started_at": "2026-09-21T01:32:32.916943+00:00",
+      "timeout_s": 600.0,
+      "source": "runs/mlx-retest/jev-255-articles/hard-dna.json",
+      "resolved_models": [
+        "jev-1.13.0"
+      ],
+      "phase_seconds": {
+        "score_ms": 31.757,
+        "choice_ms": 4.441,
+        "execution_ms": 25.906,
+        "observe_ms": 1.111
+      },
+      "max_choice_candidates": 255,
+      "mlx_audit": {
+        "model_calls": 0,
+        "fully_retained_questions": 0,
+        "partial_phase_model_calls": 0,
+        "partial_phase_retained_questions": 0,
+        "all_model_calls": 0,
+        "all_retained_questions": 0,
+        "max_input_tokens": 0,
+        "native_predict_seconds": 0.0,
+        "completed_score_candidates": 0,
+        "completed_choice_candidates": 0,
+        "versions": [
+          "remote"
+        ],
+        "completed_call_coverage_verified": false
+      }
+    },
+    {
+      "brain": "jev",
+      "model": "jev-latest",
+      "run_id": "389b07c8a48b451a80d9b47dde7e0a54",
+      "task_id": "hard-music",
+      "start": "Music",
+      "goal": "2001 AAA Championships",
+      "status": "success",
+      "reason": "reached_goal",
+      "clicks": 10,
+      "scrolls": 0,
+      "seconds": 84.44,
+      "setup_seconds": 43.874,
+      "total_seconds": 128.314,
+      "path": [
+        "Music",
+        "Music (disambiguation)",
+        "Musical notation",
+        "Musical composition",
+        "Music theory",
+        "The Oxford Companion to Music",
+        "Oxford Companions",
+        "Sport",
+        "Sport of athletics",
+        "AAA Championships",
+        "2001 AAA Championships"
+      ],
+      "api_usage": {
+        "requests": 47,
+        "attempts": 47,
+        "input_tokens": 962892,
+        "output_tokens": 58084,
+        "models": [
+          "jev-1.13.0"
+        ]
+      },
+      "code_fingerprint": "3fa709ed192e1016b5b9a935ef876f97111680378e5acb739f35b4207f9c8d18",
+      "observation_mode": "page",
+      "started_at": "2026-09-21T01:34:22.640718+00:00",
+      "timeout_s": 600.0,
+      "source": "runs/mlx-retest/jev-255-articles/hard-music.json",
+      "resolved_models": [
+        "jev-1.13.0"
+      ],
+      "phase_seconds": {
+        "score_ms": 32.69,
+        "choice_ms": 9.835,
+        "execution_ms": 37.94,
+        "observe_ms": 3.911
+      },
+      "max_choice_candidates": 255,
+      "mlx_audit": {
+        "model_calls": 0,
+        "fully_retained_questions": 0,
+        "partial_phase_model_calls": 0,
+        "partial_phase_retained_questions": 0,
+        "all_model_calls": 0,
+        "all_retained_questions": 0,
+        "max_input_tokens": 0,
+        "native_predict_seconds": 0.0,
+        "completed_score_candidates": 0,
+        "completed_choice_candidates": 0,
+        "versions": [
+          "remote"
+        ],
+        "completed_call_coverage_verified": false
+      }
+    },
+    {
+      "brain": "jev",
+      "model": "jev-latest",
+      "run_id": "e0999d0eaf354359a1c4b994118085eb",
+      "task_id": "hard-wwii",
+      "start": "World War II",
+      "goal": "Bald Mountain Recreation Area",
+      "status": "success",
+      "reason": "reached_goal",
+      "clicks": 4,
+      "scrolls": 0,
+      "seconds": 120.294,
+      "setup_seconds": 42.008,
+      "total_seconds": 162.302,
+      "path": [
+        "World War II",
+        "United States",
+        "Michigan",
+        "List of Michigan state parks",
+        "Bald Mountain Recreation Area"
+      ],
+      "api_usage": {
+        "requests": 73,
+        "attempts": 73,
+        "input_tokens": 1635519,
+        "output_tokens": 84694,
+        "models": [
+          "jev-1.13.0"
+        ]
+      },
+      "code_fingerprint": "3fa709ed192e1016b5b9a935ef876f97111680378e5acb739f35b4207f9c8d18",
+      "observation_mode": "page",
+      "started_at": "2026-09-21T01:36:32.323285+00:00",
+      "timeout_s": 600.0,
+      "source": "runs/mlx-retest/jev-255-articles/hard-wwii.json",
+      "resolved_models": [
+        "jev-1.13.0"
+      ],
+      "phase_seconds": {
+        "score_ms": 71.731,
+        "choice_ms": 2.608,
+        "execution_ms": 43.149,
+        "observe_ms": 2.73
+      },
+      "max_choice_candidates": 255,
+      "mlx_audit": {
+        "model_calls": 0,
+        "fully_retained_questions": 0,
+        "partial_phase_model_calls": 0,
+        "partial_phase_retained_questions": 0,
+        "all_model_calls": 0,
+        "all_retained_questions": 0,
+        "max_input_tokens": 0,
+        "native_predict_seconds": 0.0,
+        "completed_score_candidates": 0,
+        "completed_choice_candidates": 0,
+        "versions": [
+          "remote"
+        ],
+        "completed_call_coverage_verified": false
+      }
+    },
+    {
+      "brain": "laya-mlx",
+      "model": "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx",
+      "run_id": "9a7fe111db894bd6bd9d40248587a1f9",
+      "task_id": "hard-dna",
+      "start": "DNA",
+      "goal": "Manipuri pony",
+      "status": "fail",
+      "reason": "timeout",
+      "clicks": 41,
+      "scrolls": 0,
+      "seconds": 600.191,
+      "setup_seconds": 35.914,
+      "total_seconds": 636.105,
+      "path": [
+        "DNA",
+        "Biochemistry",
+        "List of life sciences",
+        "Science, technology, engineering, and mathematics",
+        "Science and technology in India",
+        "History of science and technology on the Indian subcontinent",
+        "Science and technology studies in India",
+        "Current Science",
+        "Academic journal",
+        "Science",
+        "Science and technology studies",
+        "Science, Technology, & Human Values",
+        "History and philosophy of science",
+        "Digital object identifier",
+        "Semantic interoperability",
+        "Semantics",
+        "Cognitive science",
+        "Embodied cognitive science",
+        "Cognitive neuroscience",
+        "Developmental cognitive neuroscience",
+        "Sensory neuroscience",
+        "Neuroscience",
+        "Neurotechnology",
+        "Scientific American",
+        "Popular Science",
+        "Popular Mechanics",
+        "Technology and Culture",
+        "History of technology",
+        "Ancient technology",
+        "Prehistoric technology",
+        "Archaeological culture",
+        "Windmill Hill culture",
+        "Butmir culture",
+        "Bronze Age",
+        "Bronze Age India",
+        "Iron Age in India",
+        "History of India",
+        "Cultural history of India",
+        "Culture of India",
+        "India"
+      ],
+      "api_usage": {
+        "requests": 178,
+        "attempts": 178,
+        "input_tokens": 2576983,
+        "output_tokens": 0,
+        "models": [
+          "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx"
+        ]
+      },
+      "code_fingerprint": "3fa709ed192e1016b5b9a935ef876f97111680378e5acb739f35b4207f9c8d18",
+      "observation_mode": "page",
+      "started_at": "2026-09-21T01:36:02.722008+00:00",
+      "timeout_s": 600.0,
+      "source": "runs/mlx-retest/laya-255-articles/hard-dna.json",
+      "resolved_models": [
+        "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx"
+      ],
+      "phase_seconds": {
+        "score_ms": 296.783,
+        "choice_ms": 79.693,
+        "execution_ms": 192.725,
+        "observe_ms": 17.227
+      },
+      "max_choice_candidates": 255,
+      "mlx_audit": {
+        "model_calls": 1490,
+        "fully_retained_questions": 9117,
+        "partial_phase_model_calls": 2,
+        "partial_phase_retained_questions": 32,
+        "all_model_calls": 1492,
+        "all_retained_questions": 9149,
+        "max_input_tokens": 506,
+        "native_predict_seconds": 363.503,
+        "completed_score_candidates": 8143,
+        "completed_choice_candidates": 6527,
+        "versions": [
+          "laya-mlx-page-v2-255-tournament"
+        ],
+        "completed_call_coverage_verified": true
+      }
+    },
+    {
+      "brain": "laya-mlx",
+      "model": "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx",
+      "run_id": "adbd7dcf07774208832d7c7789f247cb",
+      "task_id": "hard-music",
+      "start": "Music",
+      "goal": "2001 AAA Championships",
+      "status": "fail",
+      "reason": "timeout",
+      "clicks": 30,
+      "scrolls": 0,
+      "seconds": 600.058,
+      "setup_seconds": 33.499,
+      "total_seconds": 633.557,
+      "path": [
+        "Music",
+        "Western world",
+        "Europe",
+        "Battle of Berlin",
+        "Soviet Union",
+        "Hungarian Revolution of 1956",
+        "Cultural representations of the Hungarian Revolution of 1956",
+        "Hungarian People's Republic",
+        "End of communism in Hungary",
+        "NATO",
+        "Member states of NATO",
+        "History of NATO",
+        "Foreign relations of NATO",
+        "European Union–NATO relations",
+        "De facto and de jure",
+        "Family law",
+        "English family law",
+        "Divorce in England and Wales",
+        "England",
+        "The Ashes",
+        "Birmingham",
+        "England and Wales",
+        "Henry VIII",
+        "Tudor period",
+        "Tudor rose",
+        "Rose",
+        "Perennial",
+        "Perennial vegetable",
+        "Sea beet",
+        "Interim Register of Marine and Nonmarine Genera",
+        "Bacteria"
+      ],
+      "api_usage": {
+        "requests": 206,
+        "attempts": 206,
+        "input_tokens": 2816902,
+        "output_tokens": 0,
+        "models": [
+          "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx"
+        ]
+      },
+      "code_fingerprint": "3fa709ed192e1016b5b9a935ef876f97111680378e5acb739f35b4207f9c8d18",
+      "observation_mode": "page",
+      "started_at": "2026-09-21T01:46:41.607990+00:00",
+      "timeout_s": 600.0,
+      "source": "runs/mlx-retest/laya-255-articles/hard-music.json",
+      "resolved_models": [
+        "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx"
+      ],
+      "phase_seconds": {
+        "score_ms": 361.852,
+        "choice_ms": 66.554,
+        "execution_ms": 148.454,
+        "observe_ms": 14.695
+      },
+      "max_choice_candidates": 255,
+      "mlx_audit": {
+        "model_calls": 1520,
+        "fully_retained_questions": 11484,
+        "partial_phase_model_calls": 0,
+        "partial_phase_retained_questions": 0,
+        "all_model_calls": 1520,
+        "all_retained_questions": 11484,
+        "max_input_tokens": 490,
+        "native_predict_seconds": 394.263,
+        "completed_score_candidates": 10637,
+        "completed_choice_candidates": 5750,
+        "versions": [
+          "laya-mlx-page-v2-255-tournament"
+        ],
+        "completed_call_coverage_verified": true
+      }
+    },
+    {
+      "brain": "laya-mlx",
+      "model": "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx",
+      "run_id": "2c0ded45aed74319bd753a62884b8033",
+      "task_id": "hard-wwii",
+      "start": "World War II",
+      "goal": "Bald Mountain Recreation Area",
+      "status": "fail",
+      "reason": "timeout",
+      "clicks": 32,
+      "scrolls": 0,
+      "seconds": 600.007,
+      "setup_seconds": 37.651,
+      "total_seconds": 637.658,
+      "path": [
+        "World War II",
+        "Causes of World War II",
+        "Lists of World War II topics",
+        "Bombing of Essen in World War II",
+        "Bombing of Cologne in World War II",
+        "RAF Training Command",
+        "List of Royal Air Force commands",
+        "Royal Air Force",
+        "History of the Royal Air Force",
+        "Korean War",
+        "Korea",
+        "Prehistoric Korea",
+        "Bronze Age",
+        "Nordic Bronze Age",
+        "Bell Beaker culture",
+        "Archaeological science",
+        "Conservation science (cultural property)",
+        "Fire",
+        "History of the firearm",
+        "History of weapons",
+        "List of medieval weapons",
+        "Lists of weapons",
+        "List of German military equipment of World War II",
+        "Strategic defence",
+        "Military strategy",
+        "Strategic goal (military)",
+        "Legitimate military target",
+        "War of independence",
+        "Yugoslav Wars",
+        "NATO",
+        "History of NATO",
+        "2022 Russian invasion of Ukraine"
+      ],
+      "api_usage": {
+        "requests": 175,
+        "attempts": 175,
+        "input_tokens": 2656828,
+        "output_tokens": 0,
+        "models": [
+          "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx"
+        ]
+      },
+      "code_fingerprint": "3fa709ed192e1016b5b9a935ef876f97111680378e5acb739f35b4207f9c8d18",
+      "observation_mode": "page",
+      "started_at": "2026-09-21T01:57:18.238785+00:00",
+      "timeout_s": 600.0,
+      "source": "runs/mlx-retest/laya-255-articles/hard-wwii.json",
+      "resolved_models": [
+        "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx"
+      ],
+      "phase_seconds": {
+        "score_ms": 318.141,
+        "choice_ms": 76.516,
+        "execution_ms": 175.394,
+        "observe_ms": 17.456
+      },
+      "max_choice_candidates": 255,
+      "mlx_audit": {
+        "model_calls": 1474,
+        "fully_retained_questions": 9693,
+        "partial_phase_model_calls": 0,
+        "partial_phase_retained_questions": 0,
+        "all_model_calls": 1474,
+        "all_retained_questions": 9693,
+        "max_input_tokens": 512,
+        "native_predict_seconds": 378.771,
+        "completed_score_candidates": 8777,
+        "completed_choice_candidates": 6224,
+        "versions": [
+          "laya-mlx-page-v2-255-tournament"
+        ],
+        "completed_call_coverage_verified": true
+      }
+    }
+  ],
+  "note": "One run per condition; no stable success-rate estimate."
+}

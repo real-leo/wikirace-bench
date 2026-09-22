@@ -1,0 +1,50 @@
+--- probe/wikirace/unified_brain.py
++++ race/wikirace/unified_brain.py
+@@ -95,7 +95,15 @@
+             request = {"model": self.model, "state": item["state"],
+                        "questions": protocol.choice_questions(item)}
+             if self.name == "jev":
+-                response = self.backend._post(request)
++                try:
++                    response = self.backend._post(request)
++                except Exception as exc:
++                    error_response = getattr(exc, "response", None)
++                    exc.brain_debug = {"unified_failed_request": {
++                        "canonical": item, "request": request, "input_audit": audit,
++                        "status_code": getattr(error_response, "status_code", None),
++                        "response_body": getattr(error_response, "text", "")[:10000]}}
++                    raise
+             else:
+                 from wikirace.laya_mlx_brain import strict_prepare
+                 strict_prepare(self.native, item["state"], request["questions"])
+@@ -143,7 +151,8 @@
+                 rounds.append(groups)
+                 contenders = winners
+         except Exception as exc:
+-            exc.brain_debug = {"unified_calls": calls, "unified_rounds": rounds, "prompt_version": protocol.VERSION}
++            exc.brain_debug = {**getattr(exc, "brain_debug", {}), "unified_calls": calls,
++                               "unified_rounds": rounds, "prompt_version": protocol.VERSION}
+             raise
+         return Action(action="click", link_id=contenders[0]["id"]), {
+             "prompt_version": protocol.VERSION, "unified_calls": calls, "unified_rounds": rounds,
+
+--- probe/wikirace/unified_protocol.py
++++ race/wikirace/unified_protocol.py
+@@ -116,7 +116,16 @@
+             if hashlib.sha256((ROOT / "models/Qwen3.5-4B" / name).read_bytes()).hexdigest() != expected:
+                 raise ValueError("unified_qwen_tokenizer_changed")
+         self.laya = Tokenizer.from_file(str(ROOT / "models/laya-mlx/tokenizer/tokenizer.json"))
+-        self.qwen = Tokenizer.from_file(str(ROOT / "models/Qwen3.5-4B/tokenizer.json"))
++        qwen_path = ROOT / "models/Qwen3.5-4B/tokenizer.json"
++        qwen_spec = json.loads(qwen_path.read_text())
++        runtime_spec = json.loads((ROOT / "data/unified_qwen_pre_tokenizer.json").read_text())
++        if hashlib.sha256(qwen_path.read_bytes()).hexdigest() != runtime_spec["source_tokenizer_sha256"]:
++            raise ValueError("unified_qwen_runtime_spec_source_changed")
++        # Transformers repairs Qwen's pre-tokenizer at load time. The raw JSON
++        # alone agrees on many English inputs but diverges on e.g. Devanagari.
++        # Use the same runtime splitter without requiring Transformers in every venv.
++        qwen_spec["pre_tokenizer"] = runtime_spec["pre_tokenizer"]
++        self.qwen = Tokenizer.from_str(json.dumps(qwen_spec))
+         for tokenizer in (self.laya, self.qwen):
+             tokenizer.no_padding()
+             tokenizer.no_truncation()

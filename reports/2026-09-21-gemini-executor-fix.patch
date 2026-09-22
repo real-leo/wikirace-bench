@@ -1,0 +1,60 @@
+--- runs/gemini-unified/2026-09-21/repair/eval-before-page-support.py
++++ wikirace/eval.py
+@@ -150,7 +150,9 @@
+         if env.browser is not None:
+             setup_navigation = getattr(env.browser, "last_navigation", None)
+         state = env.observe()
+-        if state.observation_mode == "page" and brain.name not in {"jev", "overlap", "laya", "laya-mlx", "semif"}:
++        if (state.observation_mode == "page"
++                and brain.name not in {"jev", "overlap", "laya", "laya-mlx", "semif"}
++                and not getattr(brain, "supports_page_mode", False)):
+             raise ValueError("unsupported_page_brain: use observation_mode=viewport for other brains")
+         setup_seconds = time.perf_counter() - total_t0
+         action_t0 = time.perf_counter()
+--- runs/gemini-unified/2026-09-21/repair/chat-before-lifecycle-fix.py
++++ scripts/unified_chat_brain.py
+@@ -1,7 +1,7 @@
+ """Chat-completion transport for the existing, unchanged unified choice policy.
+ 
+-Kept outside wikirace while the three-backend benchmark is running: its runtime
+-fingerprint and loaded adapters must remain reproducible.
++The adapter records its own source hash alongside the common runtime hash.
++It declares page-mode support and inherits the unchanged grouping policy.
+ """
+ from __future__ import annotations
+ 
+@@ -61,11 +61,12 @@
+ 
+ 
+ class ChatBackend:
+-    def __init__(self, *, client=None, api_key=None, base_url=None, model=None):
++    def __init__(self, *, client=None, client_factory=None, api_key=None, base_url=None, model=None):
+         self.api_key = api_key if api_key is not None else os.environ["HOTDAY_API_KEY"]
+         self.base_url = (base_url or os.environ.get("HOTDAY_BASE_URL", "https://api.hotday.uk/v1")).rstrip("/")
+         self.model = model or os.environ.get("HOTDAY_MODEL", "models/gemini-3.8-flash")
+-        self.client = client or httpx.Client(timeout=60, follow_redirects=False)
++        self.client_factory = client_factory or (lambda: httpx.Client(timeout=60, follow_redirects=False))
++        self.client = client or self.client_factory()
+         self.reset_episode()
+ 
+     def reset_episode(self):
+@@ -86,6 +87,10 @@
+             remaining = 60 if self._deadline is None else self._deadline - time.perf_counter()
+             if remaining <= 0:
+                 raise TimeoutError("episode_deadline_exceeded")
++            # The shared evaluator closes every brain at the end of an episode.
++            # A later task in the same suite needs a fresh HTTP connection pool.
++            if self.client.is_closed:
++                self.client = self.client_factory()
+             try:
+                 response = self.client.post(self.base_url + "/chat/completions",
+                     headers={"Authorization": "Bearer " + self.api_key}, json=body, timeout=min(60, remaining))
+@@ -107,6 +112,8 @@
+ 
+ 
+ class UnifiedChatBrain(UnifiedBrain):
++    supports_page_mode = True
++
+     def __init__(self, *, backend=None, planner=None):
+         super().__init__("jev", backend=backend or ChatBackend(), planner=planner)
+         self.name = "gemini"

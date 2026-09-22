@@ -10,7 +10,7 @@ model decision for each screen.
 Each page visit collects its links once from the rendered article DOM:
 
 - Include off-screen article links and rendered infobox, table and navigation-box links.
-- Exclude hidden elements, other origins, non-article namespaces and same-page fragments.
+- Exclude hidden elements, other origins, non-article namespaces, red/edit links and same-page fragments.
 - Deduplicate by destination URL; filter previously visited or blocked destinations.
 - Preserve each candidate's stable id, article title, actual URL and short local context.
 - Supply the goal title and intro, current title and intro, and the last six visited titles.
@@ -25,7 +25,7 @@ the bottom is necessary.
 | Eligible links | Model calls | Offered click choices |
 |---|---|---|
 | 1–255 | One Choice call | Every eligible link |
-| More than 255 | Score every eligible link in batches of at most 64 questions, then one Choice call | Highest-scoring 64 links |
+| More than 255 | Score every eligible link in batches of at most 64 questions, then one Choice call | Highest-scoring 255 links |
 | 0 | End with `page_links_empty` | None |
 
 Large pages are **not truncated before scoring**. Every eligible link must
@@ -33,7 +33,7 @@ receive a valid score before ranking; missing answers fail explicitly. An exact
 goal link, if present, is retained in the shortlist. The model still chooses the
 click. Batches run sequentially and the episode deadline applies throughout.
 
-The `page-target-v1` prompt focuses on the identity of the destination: its
+The `page-target-v2-255` policy focuses on the identity of the destination: its
 location, organization, event series or other distinguishing facts. A shared
 word such as “mountain” is weak evidence by itself. Specific relevant lists and
 concrete connections receive stronger scores; broad hubs are allowed when they
@@ -46,7 +46,7 @@ closely connected index. They are ranking hints, not success probabilities.
 The two-stage design follows TypeSafe's [public Wikiracing description](https://typesafe.ai/blog/introducing-system-one-models-and-jev):
 score large candidate sets, then use Choice within its 255-option limit.
 The official demo's complete prompt, DOM filters and shortlist size have not
-been published in the sources reviewed. This repository's prompt, 64-link
+been published in the sources reviewed. This repository's prompt, 255-link
 shortlist, context format and visited-page filtering are our implementation;
 this is not an exact reproduction of the demo.
 
@@ -96,10 +96,94 @@ are not an equivalent benchmark of model ability.
 | `jev` | Page (default): Score when needed, then Choice; legacy viewport |
 | `overlap` | Page and viewport, using token-overlap heuristics |
 | `laya` | Page (default) and viewport; local Score + Choice, requires `laya` and `USE_TF=0` |
+| `laya-mlx` | Page only; Apple GPU, full candidate coverage with token-checked grouped Choice |
+| `semif` | Page only; native Qwen3.5 MLX option scoring, all links in groups of at most 16 |
 | `gpt` / `deepseek` / `claude` | Viewport only; JSON actions |
 
 Pass `--observation viewport` explicitly for brains without a page policy (gpt/deepseek/claude).
 Fixture and MediaWiki API sources retain their existing non-browser behavior.
+
+Apple Silicon deployment: see the [Laya MLX validation and input audit](reports/2026-09-21-mac-mlx-analysis.md).
+The [255-candidate retest and SemIf deployment report](reports/2026-09-21-page-255-retest.md)
+contains the new browser results, pinned model revisions and local reproduction commands.
+Use `--brain laya-mlx` for the new adapter. It presents the complete title of each
+Score candidate, and compares all offered candidates in groups that fit the
+checkpoint, repeating with the group winners. Every request is checked against
+the tokenizer's full untruncated input. The policy accepts 255 candidates, but
+this tournament is not equivalent to Jev's native 255-way Choice. Optional
+descriptions are explicitly shortened; full titles are preserved. The old
+`--brain laya` CPU adapter remains available for historical reproduction and
+still has its 64-option cap and long-input limitations.
+
+```bash
+uv venv --python 3.12 .venv-mlx  # once, when this environment does not exist
+uv pip sync --python .venv-mlx/bin/python requirements-mlx.lock.txt
+HF_HUB_OFFLINE=1 .venv-mlx/bin/python run.py play --brain laya-mlx \
+  --source browser --observation page --start Coffee --goal Caffeine --timeout 600
+```
+
+The September 20 reports used a 64-link shortlist for large pages. New 255-link
+runs have a new policy version and must not be pooled with those older runs.
+
+The [all-link, extended-budget comparison](reports/2026-09-21-grouped-long-comparison.md)
+also tests `--page-policy grouped-all` through `scripts/run_mlx_retest.py`.
+This sends every eligible link through a tournament before clicking, with no
+Score-to-255 prefilter. Laya groups contain at most 8 links within 512 tokens;
+SemIf groups contain at most 16 links within a 4,096-token application budget.
+Groups shrink if their complete inputs do not fit. Group probabilities are
+conditional on their own options, so winners are compared again in later rounds.
+SemIf requires `.venv-semif`, the local source checkout and pinned model described
+in the deployment report; it defaults to this all-link policy.
+Create the pinned checkout before installing the SemIf lockfile (run from the
+repository root; model download details are in the deployment report):
+
+```bash
+git clone https://github.com/TheoLeeCJ/SemIf.git third_party/SemIf
+git -C third_party/SemIf checkout ca3ba65f142967030ecb453346e94d6f476a69df
+uv venv --python 3.12 .venv-semif
+uv pip sync --python .venv-semif/bin/python requirements-semif.lock.txt
+```
+
+The completed three-task run (up to 60 minutes per task) reached 3/3 goals with
+Jev, 2/3 with SemIf, and 2/3 with Laya MLX. Laya's Music task finished at about
+32 minutes after missing the 30-minute checkpoint. These are single-run system
+results on live pages, not a fixed-input model ranking; see the report for
+candidate differences, input audits and the excluded red-link failure run.
+
+An [offline 255-option capacity experiment](reports/2026-09-21-wide-choice-analysis.md)
+also verifies in-memory context/answer-code extensions for both local backends.
+Both execute a single 255-option decision, but Laya's simple target checks remain
+weak and SemIf's measured speedup is small. This exploratory script does not
+change the default adapters or model files.
+
+For a matched-input comparison, use the new
+[unified protocol](reports/2026-09-21-unified-protocol.md) and
+`scripts/run_unified_comparison.py --out-root runs/unified-255/new-run --timeout 3600`.
+All three backends receive the same rules, goal/current descriptions, recent path,
+full candidate titles and short contexts. All cover the eligible links in groups
+of up to 255, without a backend-specific Score prefilter. Both local tokenizers
+jointly determine group sizes, and fixed-input hashes must match before live races.
+This is a separate protocol; use its dedicated runner rather than the legacy defaults.
+The [matched-input results](reports/2026-09-21-unified-comparison.md) distinguish
+completed fixed-input checks from completed or pending full races.
+
+The [Gemini chat baseline](reports/2026-09-21-gemini-unified-comparison.md) uses
+the same evidence, rule text, 255-option groups and tournament. Set
+`HOTDAY_API_KEY`, `HOTDAY_BASE_URL` and `HOTDAY_MODEL` in the ignored `.env`.
+It requests strict JSON choices and rejects invalid or truncated responses.
+The runner audits fixed-input parity first, then starts the three browser tasks.
+Cloud API inference can run alongside the local GPU benchmark; the report
+records that overlap. Add `--wait-for-baseline` only to request serial execution:
+
+```bash
+.venv-semif/bin/python scripts/run_gemini_comparison.py \
+  --out-root runs/gemini-unified/new-run \
+  --baseline-root runs/unified-255/2026-09-21-v3 --timeout 3600
+```
+
+Actual chat request bodies, response model names and usage are saved without
+authorization headers. The add-on adapter lives under `scripts/` and records
+its source hash alongside the shared runtime fingerprint.
 
 ## Install
 

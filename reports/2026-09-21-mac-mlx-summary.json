@@ -1,0 +1,1710 @@
+{
+  "created_at": "2026-09-21T00:56:19.388071+00:00",
+  "machine": "arm64",
+  "macos": "15.7.2",
+  "python": "3.12.13",
+  "device": {
+    "device_name": "Apple M1 Max",
+    "max_recommended_working_set_size": 22906503168,
+    "memory_size": 34359738368,
+    "architecture": "applegpu_g13s",
+    "max_buffer_length": 17179869184,
+    "resource_limit": 499000
+  },
+  "packages": {
+    "laya-mlx": "0.1.0",
+    "mlx": "0.32.2",
+    "mlx-metal": "0.32.2",
+    "tokenizers": "0.23.2",
+    "huggingface-hub": "1.32.0"
+  },
+  "model": "aac6fef/laya-mlx",
+  "revision": "047678560251f28113ee8f5df4be82102c7bf336",
+  "weight_sha256": "b9c07bf14be2fa5c78a9193a3e6d840ac80e89e62fc40f425834c3d8a6eaa3de",
+  "local_path": "/Volumes/MachineU1/github_work/wikirace-bench/models/laya-mlx",
+  "dtype": "float16",
+  "batch_size": 16,
+  "compile": false,
+  "cache_prompts": false,
+  "allocation_cache_limit_mib": 512,
+  "load_seconds": 0.314,
+  "timing_scope": "Synchronized predict, including preparation and result formatting; excludes model load and one warmup per case",
+  "smoke": {
+    "short_choice": {
+      "iterations": 10,
+      "warmup_calls": 1,
+      "median_ms": 18.627,
+      "samples_ms": [
+        36.29,
+        19.815,
+        19.786,
+        19.84,
+        17.048,
+        17.684,
+        18.177,
+        18.628,
+        18.221,
+        18.627
+      ],
+      "questions": 1,
+      "answers": {
+        "department": {
+          "type": "choice",
+          "confidence": 0.6266,
+          "action": {
+            "act_probability": 1.0
+          },
+          "choice": "billing",
+          "probabilities": {
+            "billing": 0.8891,
+            "technical": 0.0836,
+            "sales": 0.0273
+          }
+        }
+      }
+    },
+    "short_score": {
+      "iterations": 10,
+      "warmup_calls": 1,
+      "median_ms": 21.485,
+      "samples_ms": [
+        28.18,
+        22.333,
+        22.046,
+        19.976,
+        21.213,
+        21.76,
+        20.672,
+        18.699,
+        20.629,
+        21.756
+      ],
+      "questions": 1,
+      "answers": {
+        "refund": {
+          "type": "score",
+          "confidence": 0.5887,
+          "action": {
+            "act_probability": 1.0
+          },
+          "score": 1.8453,
+          "legend": {
+            "0": "No request",
+            "1": "Unclear request",
+            "2": "Explicit refund request"
+          },
+          "probabilities": {
+            "0": 0.0139,
+            "1": 0.127,
+            "2": 0.8591
+          }
+        }
+      }
+    },
+    "compact_wikirace_choice": {
+      "iterations": 10,
+      "warmup_calls": 1,
+      "median_ms": 18.734,
+      "samples_ms": [
+        19.708,
+        18.066,
+        18.865,
+        19.056,
+        18.907,
+        18.603,
+        18.504,
+        18.014,
+        18.986,
+        18.038
+      ],
+      "questions": 1,
+      "answers": {
+        "next": {
+          "type": "choice",
+          "confidence": 0.8766,
+          "action": {
+            "act_probability": 1.0
+          },
+          "choice": "L002",
+          "probabilities": {
+            "L001": 0.0147,
+            "L002": 0.9746,
+            "L003": 0.0107
+          }
+        }
+      }
+    }
+  },
+  "peak_mlx_allocation_mib": 1657.89,
+  "replay": {
+    "source": "runs/round4-page/jev-hard-wwii.json",
+    "source_run_id": "c139d0b53e3c441887315f639e1ce162",
+    "note": "Replay of saved Jev payload through Laya MLX; not a reproduction of the unavailable CPU Laya episode",
+    "requests": {
+      "score_batch": {
+        "timing": {
+          "iterations": 3,
+          "warmup_calls": 1,
+          "median_ms": 4669.955,
+          "samples_ms": [
+            4678.828,
+            4669.955,
+            4667.32
+          ],
+          "questions": 64,
+          "answers": {
+            "score_L001": {
+              "type": "score",
+              "confidence": 0.0638,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6167,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2134,
+                "1": 0.2549,
+                "2": 0.2841,
+                "3": 0.1967,
+                "4": 0.0508
+              }
+            },
+            "score_L002": {
+              "type": "score",
+              "confidence": 0.0649,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.614,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2094,
+                "1": 0.2629,
+                "2": 0.2825,
+                "3": 0.1948,
+                "4": 0.0505
+              }
+            },
+            "score_L003": {
+              "type": "score",
+              "confidence": 0.0664,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5955,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2168,
+                "1": 0.2589,
+                "2": 0.2853,
+                "3": 0.1899,
+                "4": 0.0491
+              }
+            },
+            "score_L004": {
+              "type": "score",
+              "confidence": 0.0651,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5971,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2187,
+                "1": 0.2563,
+                "2": 0.2839,
+                "3": 0.1912,
+                "4": 0.0498
+              }
+            },
+            "score_L005": {
+              "type": "score",
+              "confidence": 0.0652,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5942,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2188,
+                "1": 0.2585,
+                "2": 0.2821,
+                "3": 0.1909,
+                "4": 0.0497
+              }
+            },
+            "score_L006": {
+              "type": "score",
+              "confidence": 0.0657,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6078,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2122,
+                "1": 0.2595,
+                "2": 0.287,
+                "3": 0.1912,
+                "4": 0.0502
+              }
+            },
+            "score_L007": {
+              "type": "score",
+              "confidence": 0.0651,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6037,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2136,
+                "1": 0.2614,
+                "2": 0.2828,
+                "3": 0.1919,
+                "4": 0.0502
+              }
+            },
+            "score_L008": {
+              "type": "score",
+              "confidence": 0.0657,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.594,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2184,
+                "1": 0.2581,
+                "2": 0.2841,
+                "3": 0.1898,
+                "4": 0.0496
+              }
+            },
+            "score_L009": {
+              "type": "score",
+              "confidence": 0.0654,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5937,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2189,
+                "1": 0.2583,
+                "2": 0.2825,
+                "3": 0.1907,
+                "4": 0.0495
+              }
+            },
+            "score_L010": {
+              "type": "score",
+              "confidence": 0.0645,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6046,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2159,
+                "1": 0.257,
+                "2": 0.2844,
+                "3": 0.192,
+                "4": 0.0507
+              }
+            },
+            "score_L011": {
+              "type": "score",
+              "confidence": 0.0642,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6092,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2148,
+                "1": 0.2565,
+                "2": 0.2839,
+                "3": 0.1941,
+                "4": 0.0506
+              }
+            },
+            "score_L012": {
+              "type": "score",
+              "confidence": 0.0649,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6091,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2142,
+                "1": 0.2562,
+                "2": 0.2864,
+                "3": 0.1928,
+                "4": 0.0504
+              }
+            },
+            "score_L013": {
+              "type": "score",
+              "confidence": 0.0648,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.608,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2146,
+                "1": 0.2562,
+                "2": 0.2862,
+                "3": 0.1925,
+                "4": 0.0505
+              }
+            },
+            "score_L014": {
+              "type": "score",
+              "confidence": 0.0649,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5894,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2212,
+                "1": 0.2577,
+                "2": 0.2815,
+                "3": 0.1897,
+                "4": 0.0499
+              }
+            },
+            "score_L015": {
+              "type": "score",
+              "confidence": 0.0648,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.604,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2157,
+                "1": 0.2573,
+                "2": 0.2848,
+                "3": 0.1919,
+                "4": 0.0503
+              }
+            },
+            "score_L016": {
+              "type": "score",
+              "confidence": 0.0646,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6036,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2155,
+                "1": 0.2582,
+                "2": 0.2842,
+                "3": 0.1914,
+                "4": 0.0507
+              }
+            },
+            "score_L017": {
+              "type": "score",
+              "confidence": 0.0649,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6033,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2148,
+                "1": 0.2596,
+                "2": 0.2835,
+                "3": 0.1918,
+                "4": 0.0503
+              }
+            },
+            "score_L018": {
+              "type": "score",
+              "confidence": 0.0643,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6094,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.213,
+                "1": 0.2598,
+                "2": 0.2828,
+                "3": 0.1937,
+                "4": 0.0507
+              }
+            },
+            "score_L019": {
+              "type": "score",
+              "confidence": 0.0652,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6048,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2142,
+                "1": 0.259,
+                "2": 0.2846,
+                "3": 0.1921,
+                "4": 0.0501
+              }
+            },
+            "score_L020": {
+              "type": "score",
+              "confidence": 0.0648,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6093,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2124,
+                "1": 0.2596,
+                "2": 0.2847,
+                "3": 0.1927,
+                "4": 0.0506
+              }
+            },
+            "score_L021": {
+              "type": "score",
+              "confidence": 0.0648,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6019,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2159,
+                "1": 0.2586,
+                "2": 0.2838,
+                "3": 0.1913,
+                "4": 0.0505
+              }
+            },
+            "score_L022": {
+              "type": "score",
+              "confidence": 0.0658,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6209,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2074,
+                "1": 0.2594,
+                "2": 0.2884,
+                "3": 0.1946,
+                "4": 0.0502
+              }
+            },
+            "score_L023": {
+              "type": "score",
+              "confidence": 0.0658,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5999,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2145,
+                "1": 0.261,
+                "2": 0.2846,
+                "3": 0.1902,
+                "4": 0.0498
+              }
+            },
+            "score_L024": {
+              "type": "score",
+              "confidence": 0.0661,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6057,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2117,
+                "1": 0.2613,
+                "2": 0.2863,
+                "3": 0.1909,
+                "4": 0.0498
+              }
+            },
+            "score_L025": {
+              "type": "score",
+              "confidence": 0.0652,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6045,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2128,
+                "1": 0.2619,
+                "2": 0.2834,
+                "3": 0.1914,
+                "4": 0.0504
+              }
+            },
+            "score_L026": {
+              "type": "score",
+              "confidence": 0.0656,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6016,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2139,
+                "1": 0.2608,
+                "2": 0.2853,
+                "3": 0.1898,
+                "4": 0.0502
+              }
+            },
+            "score_L027": {
+              "type": "score",
+              "confidence": 0.0648,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6036,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2139,
+                "1": 0.2612,
+                "2": 0.283,
+                "3": 0.1913,
+                "4": 0.0506
+              }
+            },
+            "score_L028": {
+              "type": "score",
+              "confidence": 0.0653,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5941,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2178,
+                "1": 0.26,
+                "2": 0.2824,
+                "3": 0.19,
+                "4": 0.0498
+              }
+            },
+            "score_L029": {
+              "type": "score",
+              "confidence": 0.0664,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5931,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2161,
+                "1": 0.2622,
+                "2": 0.2833,
+                "3": 0.1892,
+                "4": 0.0492
+              }
+            },
+            "score_L030": {
+              "type": "score",
+              "confidence": 0.0655,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6071,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2121,
+                "1": 0.2607,
+                "2": 0.2852,
+                "3": 0.1918,
+                "4": 0.0501
+              }
+            },
+            "score_L031": {
+              "type": "score",
+              "confidence": 0.0651,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6018,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.216,
+                "1": 0.2578,
+                "2": 0.2848,
+                "3": 0.1912,
+                "4": 0.0502
+              }
+            },
+            "score_L032": {
+              "type": "score",
+              "confidence": 0.0655,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6092,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2113,
+                "1": 0.2607,
+                "2": 0.2858,
+                "3": 0.192,
+                "4": 0.0503
+              }
+            },
+            "score_L033": {
+              "type": "score",
+              "confidence": 0.0657,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6007,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2134,
+                "1": 0.2632,
+                "2": 0.2828,
+                "3": 0.1908,
+                "4": 0.0499
+              }
+            },
+            "score_L034": {
+              "type": "score",
+              "confidence": 0.0657,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6067,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2112,
+                "1": 0.2627,
+                "2": 0.2843,
+                "3": 0.1918,
+                "4": 0.05
+              }
+            },
+            "score_L035": {
+              "type": "score",
+              "confidence": 0.066,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5919,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2169,
+                "1": 0.2619,
+                "2": 0.2832,
+                "3": 0.1884,
+                "4": 0.0496
+              }
+            },
+            "score_L036": {
+              "type": "score",
+              "confidence": 0.0658,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6019,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.213,
+                "1": 0.2625,
+                "2": 0.2838,
+                "3": 0.1908,
+                "4": 0.0499
+              }
+            },
+            "score_L038": {
+              "type": "score",
+              "confidence": 0.067,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6038,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2105,
+                "1": 0.264,
+                "2": 0.2859,
+                "3": 0.1903,
+                "4": 0.0492
+              }
+            },
+            "score_L039": {
+              "type": "score",
+              "confidence": 0.0653,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6074,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2116,
+                "1": 0.2622,
+                "2": 0.2835,
+                "3": 0.1924,
+                "4": 0.0502
+              }
+            },
+            "score_L040": {
+              "type": "score",
+              "confidence": 0.0651,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6051,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2132,
+                "1": 0.261,
+                "2": 0.2837,
+                "3": 0.1917,
+                "4": 0.0504
+              }
+            },
+            "score_L041": {
+              "type": "score",
+              "confidence": 0.0649,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6026,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2137,
+                "1": 0.2622,
+                "2": 0.2826,
+                "3": 0.1909,
+                "4": 0.0506
+              }
+            },
+            "score_L042": {
+              "type": "score",
+              "confidence": 0.0656,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5977,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2142,
+                "1": 0.2635,
+                "2": 0.2828,
+                "3": 0.1893,
+                "4": 0.0501
+              }
+            },
+            "score_L043": {
+              "type": "score",
+              "confidence": 0.0655,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6015,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.212,
+                "1": 0.265,
+                "2": 0.2833,
+                "3": 0.1891,
+                "4": 0.0506
+              }
+            },
+            "score_L044": {
+              "type": "score",
+              "confidence": 0.0658,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5967,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.214,
+                "1": 0.2644,
+                "2": 0.2826,
+                "3": 0.1889,
+                "4": 0.0501
+              }
+            },
+            "score_L045": {
+              "type": "score",
+              "confidence": 0.0669,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5898,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2157,
+                "1": 0.2646,
+                "2": 0.2828,
+                "3": 0.1878,
+                "4": 0.049
+              }
+            },
+            "score_L046": {
+              "type": "score",
+              "confidence": 0.0659,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5981,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2137,
+                "1": 0.2636,
+                "2": 0.2837,
+                "3": 0.189,
+                "4": 0.05
+              }
+            },
+            "score_L047": {
+              "type": "score",
+              "confidence": 0.0653,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6045,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2121,
+                "1": 0.2628,
+                "2": 0.2842,
+                "3": 0.1904,
+                "4": 0.0506
+              }
+            },
+            "score_L048": {
+              "type": "score",
+              "confidence": 0.0649,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6009,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2137,
+                "1": 0.2631,
+                "2": 0.2825,
+                "3": 0.1898,
+                "4": 0.0508
+              }
+            },
+            "score_L049": {
+              "type": "score",
+              "confidence": 0.0654,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6028,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2127,
+                "1": 0.2627,
+                "2": 0.284,
+                "3": 0.1901,
+                "4": 0.0504
+              }
+            },
+            "score_L050": {
+              "type": "score",
+              "confidence": 0.0653,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6063,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2117,
+                "1": 0.2624,
+                "2": 0.2841,
+                "3": 0.1912,
+                "4": 0.0505
+              }
+            },
+            "score_L051": {
+              "type": "score",
+              "confidence": 0.0654,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.591,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2179,
+                "1": 0.2616,
+                "2": 0.2821,
+                "3": 0.1883,
+                "4": 0.0501
+              }
+            },
+            "score_L052": {
+              "type": "score",
+              "confidence": 0.0662,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5912,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2142,
+                "1": 0.2669,
+                "2": 0.2828,
+                "3": 0.1858,
+                "4": 0.0503
+              }
+            },
+            "score_L053": {
+              "type": "score",
+              "confidence": 0.0652,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6001,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2127,
+                "1": 0.2649,
+                "2": 0.2831,
+                "3": 0.1885,
+                "4": 0.0509
+              }
+            },
+            "score_L054": {
+              "type": "score",
+              "confidence": 0.065,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5993,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2137,
+                "1": 0.2642,
+                "2": 0.2819,
+                "3": 0.1894,
+                "4": 0.0508
+              }
+            },
+            "score_L055": {
+              "type": "score",
+              "confidence": 0.0645,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.608,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2108,
+                "1": 0.2642,
+                "2": 0.2823,
+                "3": 0.1915,
+                "4": 0.0512
+              }
+            },
+            "score_L056": {
+              "type": "score",
+              "confidence": 0.0638,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5969,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2165,
+                "1": 0.2626,
+                "2": 0.2798,
+                "3": 0.1897,
+                "4": 0.0514
+              }
+            },
+            "score_L057": {
+              "type": "score",
+              "confidence": 0.0656,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5992,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2118,
+                "1": 0.2666,
+                "2": 0.2827,
+                "3": 0.1881,
+                "4": 0.0507
+              }
+            },
+            "score_L058": {
+              "type": "score",
+              "confidence": 0.0657,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6083,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.209,
+                "1": 0.265,
+                "2": 0.2854,
+                "3": 0.1898,
+                "4": 0.0508
+              }
+            },
+            "score_L059": {
+              "type": "score",
+              "confidence": 0.0656,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6099,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2096,
+                "1": 0.2632,
+                "2": 0.2854,
+                "3": 0.1914,
+                "4": 0.0504
+              }
+            },
+            "score_L060": {
+              "type": "score",
+              "confidence": 0.0653,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6142,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2079,
+                "1": 0.2638,
+                "2": 0.2855,
+                "3": 0.1918,
+                "4": 0.051
+              }
+            },
+            "score_L061": {
+              "type": "score",
+              "confidence": 0.0662,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5985,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2129,
+                "1": 0.2644,
+                "2": 0.2841,
+                "3": 0.1887,
+                "4": 0.05
+              }
+            },
+            "score_L062": {
+              "type": "score",
+              "confidence": 0.066,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.6029,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2103,
+                "1": 0.2656,
+                "2": 0.2856,
+                "3": 0.1878,
+                "4": 0.0507
+              }
+            },
+            "score_L063": {
+              "type": "score",
+              "confidence": 0.0663,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5981,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2117,
+                "1": 0.2666,
+                "2": 0.2838,
+                "3": 0.1877,
+                "4": 0.0502
+              }
+            },
+            "score_L064": {
+              "type": "score",
+              "confidence": 0.0657,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5985,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2122,
+                "1": 0.2668,
+                "2": 0.2816,
+                "3": 0.1891,
+                "4": 0.0503
+              }
+            },
+            "score_L065": {
+              "type": "score",
+              "confidence": 0.0669,
+              "action": {
+                "act_probability": 1.0
+              },
+              "score": 1.5939,
+              "legend": {
+                "0": "Unrelated to the specific target, or points to a conflicting location/entity.",
+                "1": "Only a broad shared topic or word; little evidence of a useful route.",
+                "2": "Plausible intermediate hub for the target's region or domain, but indirect.",
+                "3": "Specific bridge through the correct location, organization, event series or relevant list.",
+                "4": "The exact target, or a dedicated index/closely connected article likely to link directly to it."
+              },
+              "probabilities": {
+                "0": 0.2123,
+                "1": 0.2677,
+                "2": 0.2836,
+                "3": 0.1868,
+                "4": 0.0497
+              }
+            }
+          }
+        },
+        "audit": {
+          "questions": 64,
+          "target_candidate_id_visible_count": 2,
+          "first_question": {
+            "qid": "score_L001",
+            "total_tokens": 512,
+            "original_state_tokens": 3959,
+            "retained_state_tokens": 316,
+            "visible_state": "{\"task\": \"wikirace_article_links\", \"goal\": {\"title\": \"Bald Mountain Recreation Area\", \"description\": \"Bald Mountain State Recreation Area is a 4,637-acre (1,877 ha) state park located near Lake Orion, Michigan off M-24. It consists of some of the most rugged terrain in southeastern Michigan. The recreation area is composed of a North Unit and a South Unit, which are not contiguou\"}, \"current\": {\"title\": \"World War II\", \"description\": \"World War II,[b] or the Second World War (1 September 1939 – 2 September 1945), was a global conflict between two coalitions: the Allies and the Axis powers. Nearly all of the world's countries participated, with many engaging in total war on an unprecedented scale. World War II \"}, \"recent_path\": [\"World War II\"], \"candidates\": {\"L001\": {\"title\": \"WWII (disambiguation)\", \"url\": \"https://en.wikipedia.org/wiki/WWII_(disambiguation)\", \"context\": \"Several terms redirect here. For other uses, see WWII (disambiguation), The Second World War (disambiguation), and World War II (disambiguation).\"}, \"L002\": {\"title\": \"The Second World War (disambiguation)\", \"url\": \"https://en.wikipedia.org/wiki/The_Second_World_War_(disambiguation)\", \"context\": \"Several terms redirect here. For other uses, see WWII (disambiguation), The Second",
+            "target_candidate_id": "L001",
+            "target_candidate_id_visible": true,
+            "visible_candidate_ids": [
+              "L001",
+              "L002"
+            ]
+          }
+        }
+      },
+      "choice": {
+        "timing": {
+          "iterations": 3,
+          "warmup_calls": 1,
+          "median_ms": 89.488,
+          "samples_ms": [
+            103.382,
+            88.271,
+            89.488
+          ],
+          "questions": 1,
+          "answers": {
+            "next": {
+              "type": "choice",
+              "confidence": 0.9925,
+              "action": {
+                "act_probability": 1.0
+              },
+              "choice": "L966",
+              "probabilities": {
+                "L1064": 0.0006,
+                "L1061": 0.0002,
+                "L966": 0.9965,
+                "L022": 0.0,
+                "L047": 0.0,
+                "L046": 0.0,
+                "L810": 0.0,
+                "L1005": 0.0,
+                "L1041": 0.0,
+                "L1083": 0.0001,
+                "L805": 0.0,
+                "L1049": 0.0,
+                "L1068": 0.0004,
+                "L048": 0.0,
+                "L128": 0.0,
+                "L1038": 0.0,
+                "L1063": 0.001,
+                "L295": 0.0,
+                "L1008": 0.0007,
+                "L1066": 0.0,
+                "L1024": 0.0,
+                "L1025": 0.0,
+                "L1057": 0.0002,
+                "L1084": 0.0,
+                "L120": 0.0,
+                "L762": 0.0002,
+                "L964": 0.0001,
+                "L1021": 0.0,
+                "L126": 0.0,
+                "L302": 0.0,
+                "L1022": 0.0,
+                "L1132": 0.0,
+                "L015": 0.0,
+                "L127": 0.0,
+                "L132": 0.0,
+                "L579": 0.0,
+                "L930": 0.0,
+                "L1001": 0.0,
+                "L1147": 0.0,
+                "L042": 0.0,
+                "L122": 0.0,
+                "L445": 0.0,
+                "L549": 0.0,
+                "L830": 0.0,
+                "L831": 0.0,
+                "L1031": 0.0,
+                "L1056": 0.0,
+                "L038": 0.0,
+                "L049": 0.0,
+                "L234": 0.0,
+                "L633": 0.0,
+                "L978": 0.0,
+                "L1014": 0.0,
+                "L1042": 0.0,
+                "L1077": 0.0,
+                "L016": 0.0,
+                "L118": 0.0,
+                "L121": 0.0,
+                "L230": 0.0,
+                "L231": 0.0,
+                "L489": 0.0,
+                "L941": 0.0,
+                "L1004": 0.0,
+                "L1009": 0.0
+              }
+            }
+          }
+        },
+        "audit": {
+          "qid": "next",
+          "total_tokens": 455,
+          "original_state_tokens": 187,
+          "retained_state_tokens": 187,
+          "visible_state": "{\"task\": \"wikirace_article_links\", \"goal\": {\"title\": \"Bald Mountain Recreation Area\", \"description\": \"Bald Mountain State Recreation Area is a 4,637-acre (1,877 ha) state park located near Lake Orion, Michigan off M-24. It consists of some of the most rugged terrain in southeastern Michigan. The recreation area is composed of a North Unit and a South Unit, which are not contiguou\"}, \"current\": {\"title\": \"World War II\", \"description\": \"World War II,[b] or the Second World War (1 September 1939 – 2 September 1945), was a global conflict between two coalitions: the Allies and the Axis powers. Nearly all of the world's countries participated, with many engaging in total war on an unprecedented scale. World War II \"}, \"recent_path\": [\"World War II\"]}",
+          "full_option_titles_visible": 0,
+          "visible_instruction": "choice question: {\"question\": \"Which",
+          "option_count": 64,
+          "first_three_options": [
+            {
+              "id": "L1064",
+              "title": "Freedom from Fear: The American People in Depression and War, 1929–1945",
+              "visible_text": " L1064",
+              "full_title_visible": false
+            },
+            {
+              "id": "L1061",
+              "title": "John Keegan",
+              "visible_text": " L1061",
+              "full_title_visible": false
+            },
+            {
+              "id": "L966",
+              "title": "The Second World War (book)",
+              "visible_text": " L966",
+              "full_title_visible": false
+            }
+          ]
+        }
+      }
+    }
+  },
+  "file_verification": {
+    "manifest_files_verified": 11,
+    "checkpoint_files": 12,
+    "checkpoint_bytes": 846231875
+  }
+}

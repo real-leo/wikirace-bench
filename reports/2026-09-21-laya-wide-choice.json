@@ -1,0 +1,333 @@
+{
+  "brain": "laya-mlx",
+  "fixture_sha256": "f97e4bd53919a2416c1d01d87703f286b3d973fa25459d893a7d376b0f0609ec",
+  "script_sha256": "c1d3faf138703ec95b21eff47f0db0828b42cc174d44bfbb8eb208baf61a8c62",
+  "note": "Exploratory in-memory capacity override; no model retraining; controls are synthetic.",
+  "measurements": [
+    {
+      "task": "hard-dna",
+      "method": "compact-grouped-8",
+      "seconds": [
+        1.719047,
+        1.698699,
+        1.704653
+      ],
+      "median_seconds": 1.704653,
+      "choices": [
+        "Bioinformatics",
+        "Bioinformatics",
+        "Bioinformatics"
+      ],
+      "calls": [
+        37,
+        37,
+        37
+      ],
+      "max_input_tokens": 256,
+      "jev_selected": "Animal"
+    },
+    {
+      "task": "hard-dna",
+      "method": "compact-direct-255",
+      "seconds": [
+        0.396069,
+        0.40461,
+        0.40303
+      ],
+      "median_seconds": 0.40303,
+      "choices": [
+        "Genomics",
+        "Genomics",
+        "Genomics"
+      ],
+      "calls": [
+        1,
+        1,
+        1
+      ],
+      "max_input_tokens": 2074,
+      "jev_selected": "Animal"
+    },
+    {
+      "task": "hard-music",
+      "method": "compact-grouped-8",
+      "seconds": [
+        1.609883,
+        1.615495,
+        1.628574
+      ],
+      "median_seconds": 1.615495,
+      "choices": [
+        "Definition of music",
+        "Definition of music",
+        "Definition of music"
+      ],
+      "calls": [
+        37,
+        37,
+        37
+      ],
+      "max_input_tokens": 222,
+      "jev_selected": "Music (disambiguation)"
+    },
+    {
+      "task": "hard-music",
+      "method": "compact-direct-255",
+      "seconds": [
+        0.369927,
+        0.373283,
+        0.378318
+      ],
+      "median_seconds": 0.373283,
+      "choices": [
+        "List of musicology topics",
+        "List of musicology topics",
+        "List of musicology topics"
+      ],
+      "calls": [
+        1,
+        1,
+        1
+      ],
+      "max_input_tokens": 1964,
+      "jev_selected": "Music (disambiguation)"
+    },
+    {
+      "task": "hard-wwii",
+      "method": "compact-grouped-8",
+      "seconds": [
+        1.812049,
+        1.799668,
+        1.792966
+      ],
+      "median_seconds": 1.799668,
+      "choices": [
+        "Military capability",
+        "Military capability",
+        "Military capability"
+      ],
+      "calls": [
+        37,
+        37,
+        37
+      ],
+      "max_input_tokens": 268,
+      "jev_selected": "United States"
+    },
+    {
+      "task": "hard-wwii",
+      "method": "compact-direct-255",
+      "seconds": [
+        0.505286,
+        0.505572,
+        0.515712
+      ],
+      "median_seconds": 0.505572,
+      "choices": [
+        "Declarations of war during World War II",
+        "Declarations of war during World War II",
+        "Declarations of war during World War II"
+      ],
+      "calls": [
+        1,
+        1,
+        1
+      ],
+      "max_input_tokens": 2506,
+      "jev_selected": "United States"
+    }
+  ],
+  "controls": [
+    {
+      "task": "hard-dna",
+      "position_zero_based": 0,
+      "input_tokens": 2072,
+      "seconds": 0.399416,
+      "correct": false,
+      "selected": "Genomics",
+      "goal_probability": 0.0,
+      "grouped_correct": false,
+      "grouped_selected": "Bioinformatics",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 256
+    },
+    {
+      "task": "hard-dna",
+      "position_zero_based": 127,
+      "input_tokens": 2078,
+      "seconds": 0.410967,
+      "correct": false,
+      "selected": "Genomics",
+      "goal_probability": 0.0,
+      "grouped_correct": false,
+      "grouped_selected": "Bioinformatics",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 256
+    },
+    {
+      "task": "hard-dna",
+      "position_zero_based": 254,
+      "input_tokens": 2077,
+      "seconds": 0.393777,
+      "correct": false,
+      "selected": "Genomics",
+      "goal_probability": 0.0,
+      "grouped_correct": false,
+      "grouped_selected": "Bioinformatics",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 256
+    },
+    {
+      "task": "hard-music",
+      "position_zero_based": 0,
+      "input_tokens": 1965,
+      "seconds": 0.37439,
+      "correct": false,
+      "selected": "Music competition",
+      "goal_probability": 0.0,
+      "grouped_correct": false,
+      "grouped_selected": "Definition of music",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 222
+    },
+    {
+      "task": "hard-music",
+      "position_zero_based": 127,
+      "input_tokens": 1968,
+      "seconds": 0.367874,
+      "correct": false,
+      "selected": "Classical music",
+      "goal_probability": 0.0182,
+      "grouped_correct": false,
+      "grouped_selected": "Definition of music",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 222
+    },
+    {
+      "task": "hard-music",
+      "position_zero_based": 254,
+      "input_tokens": 1966,
+      "seconds": 0.373931,
+      "correct": true,
+      "selected": "2001 AAA Championships",
+      "goal_probability": 0.9996,
+      "grouped_correct": false,
+      "grouped_selected": "Definition of music",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 222
+    },
+    {
+      "task": "hard-wwii",
+      "position_zero_based": 0,
+      "input_tokens": 2507,
+      "seconds": 0.512826,
+      "correct": false,
+      "selected": "Declarations of war during World War II",
+      "goal_probability": 0.0,
+      "grouped_correct": true,
+      "grouped_selected": "Bald Mountain Recreation Area",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 268
+    },
+    {
+      "task": "hard-wwii",
+      "position_zero_based": 127,
+      "input_tokens": 2507,
+      "seconds": 0.507973,
+      "correct": false,
+      "selected": "Declarations of war during World War II",
+      "goal_probability": 0.0,
+      "grouped_correct": true,
+      "grouped_selected": "Bald Mountain Recreation Area",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 268
+    },
+    {
+      "task": "hard-wwii",
+      "position_zero_based": 254,
+      "input_tokens": 2511,
+      "seconds": 0.509611,
+      "correct": false,
+      "selected": "Declarations of war during World War II",
+      "goal_probability": 0.0067,
+      "grouped_correct": true,
+      "grouped_selected": "Bald Mountain Recreation Area",
+      "grouped_calls": 37,
+      "grouped_max_tokens": 268
+    }
+  ],
+  "capacities": [
+    {
+      "task": "hard-dna",
+      "format": "titles-and-context",
+      "input_tokens": 3885,
+      "native_gpu_run": true,
+      "selected": "Bioinformatics"
+    },
+    {
+      "task": "hard-music",
+      "format": "titles-and-context",
+      "input_tokens": 4183,
+      "native_gpu_run": true,
+      "selected": "Music theory"
+    },
+    {
+      "task": "hard-wwii",
+      "format": "titles-and-context",
+      "input_tokens": 4621,
+      "native_gpu_run": true,
+      "selected": "Trench warfare"
+    }
+  ],
+  "original_config": {
+    "encoder": "answerdotai/ModernBERT-large",
+    "head_layers": 2,
+    "max_len": 512,
+    "head_max_len": 192,
+    "max_prefixes": 6,
+    "act_costs": {
+      "escalate": 0.5
+    },
+    "cost_wrong_act": 3.0,
+    "amp_dtype": "bf16",
+    "model_name": "rl-agent",
+    "temperature": [
+      1.6369030475616455,
+      1.2514300346374512,
+      1.983399510383606
+    ],
+    "temperature_by_options": {
+      "choice:3-5": 1.7601518630981445,
+      "choice:6-10": 1.0000158548355103,
+      "score:3-5": 1.2514300346374512,
+      "noul:2": 1.983399510383606,
+      "choice:11+": 0.10058280825614929,
+      "choice:2": 1.9063563346862793
+    },
+    "training": {
+      "updates": 7313,
+      "epochs_completed": 1,
+      "hours": 1.96,
+      "world_size": 1,
+      "fine_tuned_from_checkpoint": true
+    }
+  },
+  "encoder_max_positions": 8192,
+  "experimental_configs": {
+    "small": [
+      512,
+      192
+    ],
+    "wide": [
+      4096,
+      3584
+    ],
+    "wide_with_context": [
+      8192,
+      7800
+    ]
+  },
+  "load_seconds": 1.873,
+  "peak_mlx_allocation_mib": 1658.4,
+  "complete": true
+}

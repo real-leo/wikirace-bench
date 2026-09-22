@@ -25,7 +25,7 @@ MAX_RECOVERY_SCROLLS = 20
 # Top-K highest-scored links forced at page bottom (finalist mode).
 FINALIST_K = 5
 PAGE_CHOICE_LIMIT = 255
-PAGE_SHORTLIST_K = 64
+PAGE_SHORTLIST_K = 255
 
 
 @dataclass

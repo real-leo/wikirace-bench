@@ -13,6 +13,8 @@ from urllib.parse import parse_qs, quote, unquote, urlparse
 from DrissionPage import ChromiumOptions, ChromiumPage
 from DrissionPage.errors import ContextLostError
 
+ARTICLE_FILTER_VERSION = "article-links-v3-no-redlinks"
+
 
 class PageLoadError(RuntimeError):
     """A navigation failure with a compact, serializable browser snapshot."""
@@ -53,19 +55,28 @@ def normalize_wiki_title(title: str) -> str:
 def title_from_wiki_url(url: str) -> str | None:
     """Extract article title from a Wikipedia /wiki/ URL."""
     try:
-        path = urlparse(url).path
+        parsed = urlparse(url)
+        path = parsed.path
+        query = parse_qs(parsed.query, keep_blank_values=True)
     except Exception:
+        return None
+    if ("redlink" in query or "veaction" in query
+            or any(action not in {"", "view"} for action in query.get("action", []))):
         return None
     m = re.search(r"/wiki/([^#?]+)", path)
     if not m:
         return None
     title = unquote(m.group(1)).replace("_", " ")
     if ":" in title:
-        ns = title.split(":", 1)[0]
-        if ns in {
-            "File", "Image", "Category", "Help", "Portal", "Template",
-            "Special", "Talk", "User", "Wikipedia", "MediaWiki", "Draft",
-            "Module", "TimedText", "Education Program", "Book",
+        ns = title.split(":", 1)[0].strip().casefold()
+        # JS performs a fast prefilter, but decoded titles are authoritative:
+        # User_talk:, Template%20talk%3A, aliases and case variants must all go.
+        base = ns.removesuffix(" talk")
+        if base in {
+            "file", "image", "category", "help", "portal", "template",
+            "media", "special", "talk", "user", "wikipedia", "mediawiki", "draft",
+            "module", "timedtext", "education program", "book", "project", "wp", "wt",
+            "gadget", "gadget definition", "topic",
         }:
             return None
     return title
@@ -83,8 +94,22 @@ class VisibleLink:
 
 
 # DrissionPage run_js requires a top-level `return` to yield a value.
+# Keep the existing UTF-16 budgets, but omit a boundary character if the slice
+# would split its surrogate pair (mathematical symbols and emoji use pairs).
+_SAFE_SLICE_JS = r"""
+const safeSlice = (value, start, end) => {
+  let first = start, last = Math.min(end, value.length);
+  const high = code => code >= 0xD800 && code <= 0xDBFF;
+  const low = code => code >= 0xDC00 && code <= 0xDFFF;
+  if (first > 0 && low(value.charCodeAt(first)) && high(value.charCodeAt(first - 1))) first++;
+  if (last > first && high(value.charCodeAt(last - 1)) && low(value.charCodeAt(last))) last--;
+  return value.slice(first, last);
+};
+"""
+
 _VIEWPORT_LINKS_JS = r"""
 return (() => {
+  __SAFE_SLICE__
   const allPage = __ALL_PAGE__;
   const root = document.querySelector('#mw-content-text')
     || document.querySelector('#bodyContent')
@@ -98,6 +123,7 @@ return (() => {
   const out = [];
   const anchors = root.querySelectorAll('a[href]');
   for (const a of anchors) {
+    if (a.classList.contains('new')) continue;
     if (!allPage && a.closest(
       'nav, .navbox, .vertical-navbox, .toc, .mw-editsection, .reference, '
       + '.noprint, .sidebar, .infobox, .hatnote, .metadata, footer, #footer, '
@@ -109,6 +135,8 @@ return (() => {
     const href = a.href || '';
     let parsed;
     try { parsed = new URL(href); } catch { continue; }
+    if (parsed.searchParams.has('redlink') || parsed.searchParams.has('veaction') ||
+        parsed.searchParams.getAll('action').some(value => value && value !== 'view')) continue;
     if (parsed.origin !== location.origin) continue;
     if (!/\/wiki\//.test(href)) continue;
     if (/\/wiki\/(File|Image|Category|Help|Portal|Template|Special|Talk|User|Wikipedia|MediaWiki|Draft|Module):/i.test(href)) {
@@ -127,7 +155,7 @@ return (() => {
     const key = href.split('#')[0];
     if (seen.has(key)) continue;
     seen.add(key);
-    const text = (a.innerText || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120);
+    const text = safeSlice((a.innerText || a.textContent || '').trim().replace(/\s+/g, ' '), 0, 120);
     // Sentence-ish context: surrounding block text, clipped around the link
     let context = '';
     const block = a.closest('p, li, dd, td, th, blockquote, h1, h2, h3, h4, h5, h6') || a.parentElement;
@@ -141,9 +169,9 @@ return (() => {
         if (idx >= 0) {
           const start = Math.max(0, idx - 100);
           const end = Math.min(full.length, idx + needle.length + 140);
-          context = (start > 0 ? '…' : '') + full.slice(start, end) + (end < full.length ? '…' : '');
+          context = (start > 0 ? '…' : '') + safeSlice(full, start, end) + (end < full.length ? '…' : '');
         } else {
-          context = full.slice(0, 240) + (full.length > 240 ? '…' : '');
+          context = safeSlice(full, 0, 240) + (full.length > 240 ? '…' : '');
         }
       }
     }
@@ -151,17 +179,18 @@ return (() => {
     out.push({
       href: key,
       text,
-      context: context.slice(0, 280),
+      context: safeSlice(context, 0, 280),
       abs_y: rect.top + scrollY,
     });
     if (!allPage && out.length >= 80) break;
   }
   return out;
 })()
-"""
+""".replace("__SAFE_SLICE__", _SAFE_SLICE_JS)
 
 _PAGE_META_JS = r"""
 return (() => {
+  __SAFE_SLICE__
   const h1 = document.querySelector('#firstHeading, h1.mw-first-heading, h1');
   const title = (h1 && (h1.innerText || h1.textContent) || document.title || '')
     .replace(/\s*-\s*Wikipedia.*$/i, '').trim();
@@ -175,13 +204,14 @@ return (() => {
     const t = (p.innerText || p.textContent || '').trim().replace(/\s+/g, ' ');
     if (t.length > 40) { extract = t; break; }
   }
-  extract = extract.slice(0, 600);
+  extract = safeSlice(extract, 0, 600);
   return { title, extract, url: location.href };
 })()
-"""
+""".replace("__SAFE_SLICE__", _SAFE_SLICE_JS)
 
 _PAGE_STATE_JS = r"""
 return (() => {
+  __SAFE_SLICE__
   const root = document.querySelector('#mw-content-text, #bodyContent');
   const heading = document.querySelector('#firstHeading, h1.mw-first-heading');
   const nav = performance.getEntriesByType('navigation')[0];
@@ -191,10 +221,10 @@ return (() => {
     heading: (heading?.textContent || '').trim(),
     http_status: nav?.responseStatus || null,
     error_code: (document.querySelector('.error-code')?.textContent || '').trim(),
-    body_excerpt: root ? '' : (document.body?.innerText || '').slice(0, 500)
+    body_excerpt: root ? '' : safeSlice((document.body?.innerText || ''), 0, 500)
   };
 })()
-"""
+""".replace("__SAFE_SLICE__", _SAFE_SLICE_JS)
 
 
 class WikiBrowser:

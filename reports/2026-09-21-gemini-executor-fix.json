@@ -1,0 +1,14 @@
+{
+  "before_runtime_fingerprint": "2a819ffc11597af4e295b4f3f3aae9c02455750633552d7904fe8e771df5c81d",
+  "after_runtime_fingerprint": "0dd78d248bddb0c8c013781cc3e0b72ca6c972cd8d43d273115f6fae4e89af55",
+  "reused_probe": "runs/gemini-unified/2026-09-21/probe/gemini/probe.json",
+  "reused_probe_sha256": "58155bb0c3ac78a46cca0322be6179a429d199aa04dedf9a0de53a5096ab1bc4",
+  "saved_chat_requests_match_current_adapter": true,
+  "fixed_input_parity_with_three_backends": true,
+  "changes": [
+    "Declare Gemini page-mode capability in executor",
+    "Reopen closed HTTP connection pool for a subsequent episode"
+  ],
+  "previous_failure": "setup gate rejected Gemini before any model call or click",
+  "new_live_run_root": "runs/gemini-unified/2026-09-21-v2"
+}

@@ -1,0 +1,1808 @@
+{
+  "note": "Actual common input for the DNA fixed-255 probe; complete candidate descriptions. All three backends must receive the same canonical hash.",
+  "canonical": {
+    "version": "unified-choice-v1",
+    "state": {
+      "goal": {
+        "title": "Manipuri pony",
+        "description": "The Manipuri Pony (Meitei: Meitei Sagol) is a traditional Indian breed of small horse or pony from Assam and Manipur in north-eastern India. It appears both in the history and the mythology of Manipur, and was used for warfare and polo. It is believed to have been the polo pony i"
+      },
+      "current": {
+        "title": "DNA",
+        "description": "Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) is a polymer composed of two polynucleotide chains that coil around each other to form a double helix. The polymer carries genetic instructions for the development, functioning, growth and reproduction of all known organisms and many"
+      },
+      "recent_path": [
+        "DNA"
+      ]
+    },
+    "instruction": "Reach the specific goal article in as few link clicks as possible. Choose the exact goal if offered. Otherwise choose the single next link most likely to lead toward that specific article. Use the goal description to identify its location, organization, event series and other distinguishing facts. Shared words or a broad shared topic alone are weak evidence. Prefer concrete entity connections and relevant lists; broader hubs are useful when they offer a credible route. Title similarity is not required. Do not invent intermediate links. All options are rendered links from the current article; visited and blocked destinations have already been filtered. Choose exactly one listed option.",
+    "options": [
+      {
+        "id": "L001",
+        "title": "Introduction to genetics",
+        "context": "For a non-technical introduction to the topic, s",
+        "description": "Introduction to genetics\nContext: For a non-technical introduction to the topic, s",
+        "code": "A"
+      },
+      {
+        "id": "L002",
+        "title": "DNA (disambiguation)",
+        "context": "For a non-technical introduction to the topic, s",
+        "description": "DNA (disambiguation)\nContext: For a non-technical introduction to the topic, s",
+        "code": "B"
+      },
+      {
+        "id": "L003",
+        "title": "Double helix",
+        "context": "The structure of the DNA double helix (type B-DN",
+        "description": "Double helix\nContext: The structure of the DNA double helix (type B-DN",
+        "code": "C"
+      },
+      {
+        "id": "L004",
+        "title": "B-DNA",
+        "context": "The structure of the DNA double helix (type B-DN",
+        "description": "B-DNA\nContext: The structure of the DNA double helix (type B-DN",
+        "code": "D"
+      },
+      {
+        "id": "L005",
+        "title": "Atom",
+        "context": "The structure of the DNA double helix (type B-DN",
+        "description": "Atom\nContext: The structure of the DNA double helix (type B-DN",
+        "code": "E"
+      },
+      {
+        "id": "L006",
+        "title": "Chemical element",
+        "context": "The structure of the DNA double helix (type B-DN",
+        "description": "Chemical element\nContext: The structure of the DNA double helix (type B-DN",
+        "code": "F"
+      },
+      {
+        "id": "L007",
+        "title": "Base pair",
+        "context": "The structure of the DNA double helix (type B-DN",
+        "description": "Base pair\nContext: The structure of the DNA double helix (type B-DN",
+        "code": "G"
+      },
+      {
+        "id": "L008",
+        "title": "Chromosome",
+        "context": "Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "description": "Chromosome\nContext: Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "code": "H"
+      },
+      {
+        "id": "L010",
+        "title": "Gene",
+        "context": "Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "description": "Gene\nContext: Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "code": "I"
+      },
+      {
+        "id": "L011",
+        "title": "Phenotype",
+        "context": "Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "description": "Phenotype\nContext: Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "code": "J"
+      },
+      {
+        "id": "L012",
+        "title": "Nuclear organization",
+        "context": "Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "description": "Nuclear organization\nContext: Chromosome (107 - 1010 bp) DNA Gene (103 - 106 b",
+        "code": "K"
+      },
+      {
+        "id": "L013",
+        "title": "Genetics",
+        "context": "",
+        "description": "Genetics",
+        "code": "L"
+      },
+      {
+        "id": "L014",
+        "title": "Polymer",
+        "context": "Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) i",
+        "description": "Polymer\nContext: Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) i",
+        "code": "M"
+      },
+      {
+        "id": "L015",
+        "title": "Polynucleotide",
+        "context": "Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) i",
+        "description": "Polynucleotide\nContext: Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) i",
+        "code": "N"
+      },
+      {
+        "id": "L016",
+        "title": "Nucleic acid double helix",
+        "context": "…ⓘ;[1] DNA) is a polymer composed of two polynuc",
+        "description": "Nucleic acid double helix\nContext: …ⓘ;[1] DNA) is a polymer composed of two polynuc",
+        "code": "O"
+      },
+      {
+        "id": "L017",
+        "title": "Reproduction",
+        "context": "…double helix. The polymer carries genetic instr",
+        "description": "Reproduction\nContext: …double helix. The polymer carries genetic instr",
+        "code": "P"
+      },
+      {
+        "id": "L018",
+        "title": "Organism",
+        "context": "…carries genetic instructions for the developmen",
+        "description": "Organism\nContext: …carries genetic instructions for the developmen",
+        "code": "Q"
+      },
+      {
+        "id": "L019",
+        "title": "Virus",
+        "context": "…tructions for the development, functioning, gro",
+        "description": "Virus\nContext: …tructions for the development, functioning, gro",
+        "code": "R"
+      },
+      {
+        "id": "L020",
+        "title": "Ribonucleic acid",
+        "context": "Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) i",
+        "description": "Ribonucleic acid\nContext: Deoxyribonucleic acid (pronunciationⓘ;[1] DNA) i",
+        "code": "S"
+      },
+      {
+        "id": "L021",
+        "title": "Nucleic acid",
+        "context": "…growth and reproduction of all known organisms ",
+        "description": "Nucleic acid\nContext: …growth and reproduction of all known organisms ",
+        "code": "T"
+      },
+      {
+        "id": "L022",
+        "title": "Protein",
+        "context": "…f all known organisms and many viruses. DNA and",
+        "description": "Protein\nContext: …f all known organisms and many viruses. DNA and",
+        "code": "U"
+      },
+      {
+        "id": "L023",
+        "title": "Lipids",
+        "context": "…n organisms and many viruses. DNA and ribonucle",
+        "description": "Lipids\nContext: …n organisms and many viruses. DNA and ribonucle",
+        "code": "V"
+      },
+      {
+        "id": "L024",
+        "title": "Polysaccharide",
+        "context": "…and ribonucleic acid (RNA) are nucleic acids. A",
+        "description": "Polysaccharide\nContext: …and ribonucleic acid (RNA) are nucleic acids. A",
+        "code": "W"
+      },
+      {
+        "id": "L025",
+        "title": "Macromolecule",
+        "context": "…ipids and complex carbohydrates (polysaccharide",
+        "description": "Macromolecule\nContext: …ipids and complex carbohydrates (polysaccharide",
+        "code": "X"
+      },
+      {
+        "id": "L026",
+        "title": "Life",
+        "context": "…c acids are one of the four major types of macr",
+        "description": "Life\nContext: …c acids are one of the four major types of macr",
+        "code": "Y"
+      },
+      {
+        "id": "L027",
+        "title": "Monomer",
+        "context": "The two DNA strands are known as polynucleotides",
+        "description": "Monomer\nContext: The two DNA strands are known as polynucleotides",
+        "code": "Z"
+      },
+      {
+        "id": "L028",
+        "title": "Nucleotide",
+        "context": "The two DNA strands are known as polynucleotides",
+        "description": "Nucleotide\nContext: The two DNA strands are known as polynucleotides",
+        "code": "AA"
+      },
+      {
+        "id": "L029",
+        "title": "Nucleobase",
+        "context": "…eric units called nucleotides.[2][3] Each nucle",
+        "description": "Nucleobase\nContext: …eric units called nucleotides.[2][3] Each nucle",
+        "code": "AB"
+      },
+      {
+        "id": "L030",
+        "title": "Cytosine",
+        "context": "…lled nucleotides.[2][3] Each nucleotide is comp",
+        "description": "Cytosine\nContext: …lled nucleotides.[2][3] Each nucleotide is comp",
+        "code": "AC"
+      },
+      {
+        "id": "L031",
+        "title": "Guanine",
+        "context": "…es.[2][3] Each nucleotide is composed of one of",
+        "description": "Guanine\nContext: …es.[2][3] Each nucleotide is composed of one of",
+        "code": "AD"
+      },
+      {
+        "id": "L032",
+        "title": "Adenine",
+        "context": "…h nucleotide is composed of one of four nitroge",
+        "description": "Adenine\nContext: …h nucleotide is composed of one of four nitroge",
+        "code": "AE"
+      },
+      {
+        "id": "L033",
+        "title": "Thymine",
+        "context": "… composed of one of four nitrogen-containing nu",
+        "description": "Thymine\nContext: … composed of one of four nitrogen-containing nu",
+        "code": "AF"
+      },
+      {
+        "id": "L034",
+        "title": "Monosaccharide",
+        "context": "… of four nitrogen-containing nucleobases (cytos",
+        "description": "Monosaccharide\nContext: … of four nitrogen-containing nucleobases (cytos",
+        "code": "AG"
+      },
+      {
+        "id": "L035",
+        "title": "Deoxyribose",
+        "context": "…ogen-containing nucleobases (cytosine [C], guan",
+        "description": "Deoxyribose\nContext: …ogen-containing nucleobases (cytosine [C], guan",
+        "code": "AH"
+      },
+      {
+        "id": "L036",
+        "title": "Organophosphate",
+        "context": "…leobases (cytosine [C], guanine [G], adenine [A",
+        "description": "Organophosphate\nContext: …leobases (cytosine [C], guanine [G], adenine [A",
+        "code": "AI"
+      },
+      {
+        "id": "L037",
+        "title": "Covalent bond",
+        "context": "… called deoxyribose, and a phosphate group. The",
+        "description": "Covalent bond\nContext: … called deoxyribose, and a phosphate group. The",
+        "code": "AJ"
+      },
+      {
+        "id": "L038",
+        "title": "Phosphodiester bond",
+        "context": "…osphate group. The nucleotides are joined to on",
+        "description": "Phosphodiester bond\nContext: …osphate group. The nucleotides are joined to on",
+        "code": "AK"
+      },
+      {
+        "id": "L039",
+        "title": "Backbone chain",
+        "context": "…age) between the sugar of one nucleotide and th",
+        "description": "Backbone chain\nContext: …age) between the sugar of one nucleotide and th",
+        "code": "AL"
+      },
+      {
+        "id": "L040",
+        "title": "Hydrogen bond",
+        "context": "…ucleotide strands are bound together, according",
+        "description": "Hydrogen bond\nContext: …ucleotide strands are bound together, according",
+        "code": "AM"
+      },
+      {
+        "id": "L041",
+        "title": "Pyrimidine",
+        "context": "…le-stranded DNA. The complementary nitrogenous ",
+        "description": "Pyrimidine\nContext: …le-stranded DNA. The complementary nitrogenous ",
+        "code": "AN"
+      },
+      {
+        "id": "L042",
+        "title": "Purine",
+        "context": "… nitrogenous bases are divided into two groups,",
+        "description": "Purine\nContext: … nitrogenous bases are divided into two groups,",
+        "code": "AO"
+      },
+      {
+        "id": "L043",
+        "title": "Central dogma of molecular biology",
+        "context": "Both strands of double-stranded DNA store the sa",
+        "description": "Central dogma of molecular biology\nContext: Both strands of double-stranded DNA store the sa",
+        "code": "AP"
+      },
+      {
+        "id": "L044",
+        "title": "DNA replication",
+        "context": "Both strands of double-stranded DNA store the sa",
+        "description": "DNA replication\nContext: Both strands of double-stranded DNA store the sa",
+        "code": "AQ"
+      },
+      {
+        "id": "L045",
+        "title": "Antiparallel (biochemistry)",
+        "context": "… two strands separate. The two strands of DNA r",
+        "description": "Antiparallel (biochemistry)\nContext: … two strands separate. The two strands of DNA r",
+        "code": "AR"
+      },
+      {
+        "id": "L046",
+        "title": "Nucleic acid sequence",
+        "context": "…thus antiparallel. Attached to each sugar is on",
+        "description": "Nucleic acid sequence\nContext: …thus antiparallel. Attached to each sugar is on",
+        "code": "AS"
+      },
+      {
+        "id": "L047",
+        "title": "Transcription (genetics)",
+        "context": "…es genetic information. RNA strands are created",
+        "description": "Transcription (genetics)\nContext: …es genetic information. RNA strands are created",
+        "code": "AT"
+      },
+      {
+        "id": "L048",
+        "title": "Uracil",
+        "context": "…xchanged for their corresponding bases except i",
+        "description": "Uracil\nContext: …xchanged for their corresponding bases except i",
+        "code": "AU"
+      },
+      {
+        "id": "L049",
+        "title": "Genetic code",
+        "context": "…ponding bases except in the case of thymine (T)",
+        "description": "Genetic code\nContext: …ponding bases except in the case of thymine (T)",
+        "code": "AV"
+      },
+      {
+        "id": "L050",
+        "title": "Amino acid",
+        "context": "…ch RNA substitutes uracil (U).[4] Under the gen",
+        "description": "Amino acid\nContext: …ch RNA substitutes uracil (U).[4] Under the gen",
+        "code": "AW"
+      },
+      {
+        "id": "L051",
+        "title": "Translation (genetics)",
+        "context": "…tic code, these RNA strands specify the sequenc",
+        "description": "Translation (genetics)\nContext: …tic code, these RNA strands specify the sequenc",
+        "code": "AX"
+      },
+      {
+        "id": "L052",
+        "title": "Cell division",
+        "context": "Within eukaryotic cells, DNA is organized into l",
+        "description": "Cell division\nContext: Within eukaryotic cells, DNA is organized into l",
+        "code": "AY"
+      },
+      {
+        "id": "L053",
+        "title": "Eukaryote",
+        "context": "… in the process of DNA replication, providing a",
+        "description": "Eukaryote\nContext: … in the process of DNA replication, providing a",
+        "code": "AZ"
+      },
+      {
+        "id": "L054",
+        "title": "Animal",
+        "context": "… replication, providing a complete set of chrom",
+        "description": "Animal\nContext: … replication, providing a complete set of chrom",
+        "code": "BA"
+      },
+      {
+        "id": "L055",
+        "title": "Plant",
+        "context": "…ion, providing a complete set of chromosomes fo",
+        "description": "Plant\nContext: …ion, providing a complete set of chromosomes fo",
+        "code": "BB"
+      },
+      {
+        "id": "L056",
+        "title": "Fungus",
+        "context": "…viding a complete set of chromosomes for each d",
+        "description": "Fungus\nContext: …viding a complete set of chromosomes for each d",
+        "code": "BC"
+      },
+      {
+        "id": "L057",
+        "title": "Protist",
+        "context": "…omplete set of chromosomes for each daughter ce",
+        "description": "Protist\nContext: …omplete set of chromosomes for each daughter ce",
+        "code": "BD"
+      },
+      {
+        "id": "L058",
+        "title": "Cell nucleus",
+        "context": "…cell. Eukaryotic organisms (animals, plants, fu",
+        "description": "Cell nucleus\nContext: …cell. Eukaryotic organisms (animals, plants, fu",
+        "code": "BE"
+      },
+      {
+        "id": "L059",
+        "title": "Nuclear DNA",
+        "context": "… organisms (animals, plants, fungi and protists",
+        "description": "Nuclear DNA\nContext: … organisms (animals, plants, fungi and protists",
+        "code": "BF"
+      },
+      {
+        "id": "L060",
+        "title": "Mitochondrion",
+        "context": "…fungi and protists) store most of their DNA ins",
+        "description": "Mitochondrion\nContext: …fungi and protists) store most of their DNA ins",
+        "code": "BG"
+      },
+      {
+        "id": "L061",
+        "title": "Mitochondrial DNA",
+        "context": "…ts) store most of their DNA inside the cell nuc",
+        "description": "Mitochondrial DNA\nContext: …ts) store most of their DNA inside the cell nuc",
+        "code": "BH"
+      },
+      {
+        "id": "L062",
+        "title": "Chloroplast",
+        "context": "…DNA inside the cell nucleus as nuclear DNA, and",
+        "description": "Chloroplast\nContext: …DNA inside the cell nucleus as nuclear DNA, and",
+        "code": "BI"
+      },
+      {
+        "id": "L063",
+        "title": "Chloroplast DNA",
+        "context": "…ell nucleus as nuclear DNA, and some in the mit",
+        "description": "Chloroplast DNA\nContext: …ell nucleus as nuclear DNA, and some in the mit",
+        "code": "BJ"
+      },
+      {
+        "id": "L064",
+        "title": "Prokaryote",
+        "context": "…ome in the mitochondria as mitochondrial DNA or",
+        "description": "Prokaryote\nContext: …ome in the mitochondria as mitochondrial DNA or",
+        "code": "BK"
+      },
+      {
+        "id": "L065",
+        "title": "Bacteria",
+        "context": "…tochondria as mitochondrial DNA or in chloropla",
+        "description": "Bacteria\nContext: …tochondria as mitochondrial DNA or in chloropla",
+        "code": "BL"
+      },
+      {
+        "id": "L066",
+        "title": "Archaea",
+        "context": "… mitochondrial DNA or in chloroplasts as chloro",
+        "description": "Archaea\nContext: … mitochondrial DNA or in chloroplasts as chloro",
+        "code": "BM"
+      },
+      {
+        "id": "L067",
+        "title": "Cytoplasm",
+        "context": "… as chloroplast DNA.[5] In contrast, prokaryote",
+        "description": "Cytoplasm\nContext: … as chloroplast DNA.[5] In contrast, prokaryote",
+        "code": "BN"
+      },
+      {
+        "id": "L068",
+        "title": "Circular chromosome",
+        "context": "…t DNA.[5] In contrast, prokaryotes (bacteria an",
+        "description": "Circular chromosome\nContext: …t DNA.[5] In contrast, prokaryotes (bacteria an",
+        "code": "BO"
+      },
+      {
+        "id": "L069",
+        "title": "Chromatin",
+        "context": "…aea) store their DNA only in the cytoplasm, in ",
+        "description": "Chromatin\nContext: …aea) store their DNA only in the cytoplasm, in ",
+        "code": "BP"
+      },
+      {
+        "id": "L070",
+        "title": "Histone",
+        "context": "… the cytoplasm, in circular chromosomes. Within",
+        "description": "Histone\nContext: … the cytoplasm, in circular chromosomes. Within",
+        "code": "BR"
+      },
+      {
+        "id": "L071",
+        "title": "Directionality (molecular biology)",
+        "context": "Chemical structure of DNA; hydrogen bonds shown ",
+        "description": "Directionality (molecular biology)\nContext: Chemical structure of DNA; hydrogen bonds shown ",
+        "code": "BS"
+      },
+      {
+        "id": "L072",
+        "title": "Nucleoside",
+        "context": "…which interacts with the other DNA strand in th",
+        "description": "Nucleoside\nContext: …which interacts with the other DNA strand in th",
+        "code": "BT"
+      },
+      {
+        "id": "L073",
+        "title": "Biopolymer",
+        "context": "…leoside, and a base linked to a sugar and to on",
+        "description": "Biopolymer\nContext: …leoside, and a base linked to a sugar and to on",
+        "code": "BU"
+      },
+      {
+        "id": "L074",
+        "title": "Hydrogen bonds",
+        "context": "…s and other shapes.[11] In all species it is co",
+        "description": "Hydrogen bonds\nContext: …s and other shapes.[11] In all species it is co",
+        "code": "BV"
+      },
+      {
+        "id": "L075",
+        "title": "Pitch (screw)",
+        "context": "…ins are coiled around the same axis (but not di",
+        "description": "Pitch (screw)\nContext: …ins are coiled around the same axis (but not di",
+        "code": "BW"
+      },
+      {
+        "id": "L076",
+        "title": "Ångström",
+        "context": "…ed around the same axis (but not directly oppos",
+        "description": "Ångström\nContext: …ed around the same axis (but not directly oppos",
+        "code": "BX"
+      },
+      {
+        "id": "L077",
+        "title": "Nanometre",
+        "context": "…ame axis (but not directly opposite one to the ",
+        "description": "Nanometre\nContext: …ame axis (but not directly opposite one to the ",
+        "code": "BY"
+      },
+      {
+        "id": "L078",
+        "title": "Line group",
+        "context": "…other), and have the same pitch of 34 ångströms",
+        "description": "Line group\nContext: …other), and have the same pitch of 34 ångströms",
+        "code": "CA"
+      },
+      {
+        "id": "L079",
+        "title": "Phosphate",
+        "context": "The backbone of the DNA strand is made from alte",
+        "description": "Phosphate\nContext: The backbone of the DNA strand is made from alte",
+        "code": "CB"
+      },
+      {
+        "id": "L080",
+        "title": "Carbohydrate",
+        "context": "The backbone of the DNA strand is made from alte",
+        "description": "Carbohydrate\nContext: The backbone of the DNA strand is made from alte",
+        "code": "CC"
+      },
+      {
+        "id": "L081",
+        "title": "Pentose",
+        "context": "…made from alternating phosphate and sugar group",
+        "description": "Pentose\nContext: …made from alternating phosphate and sugar group",
+        "code": "CD"
+      },
+      {
+        "id": "L082",
+        "title": "Carbon",
+        "context": "…rnating phosphate and sugar groups.[14] The sug",
+        "description": "Carbon\nContext: …rnating phosphate and sugar groups.[14] The sug",
+        "code": "CE"
+      },
+      {
+        "id": "L083",
+        "title": "Glycosidic bond",
+        "context": "…eing used to distinguish these carbon atoms fro",
+        "description": "Glycosidic bond\nContext: …eing used to distinguish these carbon atoms fro",
+        "code": "CF"
+      },
+      {
+        "id": "L084",
+        "title": "RNA",
+        "context": "…inal phosphate group and the 3′ end a terminal ",
+        "description": "RNA\nContext: …inal phosphate group and the 3′ end a terminal ",
+        "code": "CG"
+      },
+      {
+        "id": "L085",
+        "title": "Ribose",
+        "context": "… DNA strand normally has one end at which there",
+        "description": "Ribose\nContext: … DNA strand normally has one end at which there",
+        "code": "CH"
+      },
+      {
+        "id": "L086",
+        "title": "Stacking (chemistry)",
+        "context": "The DNA double helix is stabilized primarily by ",
+        "description": "Stacking (chemistry)\nContext: The DNA double helix is stabilized primarily by ",
+        "code": "CI"
+      },
+      {
+        "id": "L087",
+        "title": "Aromatic",
+        "context": "…ed primarily by two forces: hydrogen bonds betw",
+        "description": "Aromatic\nContext: …ed primarily by two forces: hydrogen bonds betw",
+        "code": "CK"
+      },
+      {
+        "id": "L088",
+        "title": "Adenosine monophosphate",
+        "context": "… These four bases are attached to the sugar-pho",
+        "description": "Adenosine monophosphate\nContext: … These four bases are attached to the sugar-pho",
+        "code": "CL"
+      },
+      {
+        "id": "L089",
+        "title": "Heterocyclic compound",
+        "context": "…eobases are classified into two types: the puri",
+        "description": "Heterocyclic compound\nContext: …eobases are classified into two types: the puri",
+        "code": "CM"
+      },
+      {
+        "id": "L090",
+        "title": "Methyl group",
+        "context": "…eobase, uracil (U), usually takes the place of ",
+        "description": "Methyl group\nContext: …eobase, uracil (U), usually takes the place of ",
+        "code": "CN"
+      },
+      {
+        "id": "L091",
+        "title": "Nucleic acid analogue",
+        "context": "…ers from thymine by lacking a methyl group on i",
+        "description": "Nucleic acid analogue\nContext: …ers from thymine by lacking a methyl group on i",
+        "code": "CO"
+      },
+      {
+        "id": "L092",
+        "title": "5-methylcytosine",
+        "context": "Modified bases occur in DNA. The first of these ",
+        "description": "5-methylcytosine\nContext: Modified bases occur in DNA. The first of these ",
+        "code": "CP"
+      },
+      {
+        "id": "L093",
+        "title": "Genome",
+        "context": "…fied bases occur in DNA. The first of these rec",
+        "description": "Genome\nContext: …fied bases occur in DNA. The first of these rec",
+        "code": "CR"
+      },
+      {
+        "id": "L094",
+        "title": "Mycobacterium tuberculosis",
+        "context": "… occur in DNA. The first of these recognized wa",
+        "description": "Mycobacterium tuberculosis\nContext: … occur in DNA. The first of these recognized wa",
+        "code": "CS"
+      },
+      {
+        "id": "L095",
+        "title": "Bacteriophage",
+        "context": "…rculosis in 1925.[20] The reason for the presen",
+        "description": "Bacteriophage\nContext: …rculosis in 1925.[20] The reason for the presen",
+        "code": "CT"
+      },
+      {
+        "id": "L096",
+        "title": "Restriction enzyme",
+        "context": "… for the presence of these noncanonical bases i",
+        "description": "Restriction enzyme\nContext: … for the presence of these noncanonical bases i",
+        "code": "CU"
+      },
+      {
+        "id": "L097",
+        "title": "Epigenetics",
+        "context": "… of the bases cytosine and adenine, the more co",
+        "description": "Epigenetics\nContext: … of the bases cytosine and adenine, the more co",
+        "code": "CV"
+      },
+      {
+        "id": "L098",
+        "title": "Base J",
+        "context": "",
+        "description": "Base J",
+        "code": "CW"
+      },
+      {
+        "id": "L099",
+        "title": "Hoechst stain",
+        "context": "DNA major and minor grooves. The latter is a bin",
+        "description": "Hoechst stain\nContext: DNA major and minor grooves. The latter is a bin",
+        "code": "CX"
+      },
+      {
+        "id": "L100",
+        "title": "Binding site",
+        "context": "…aces, or grooves, between the strands. These vo",
+        "description": "Binding site\nContext: …aces, or grooves, between the strands. These vo",
+        "code": "CY"
+      },
+      {
+        "id": "L101",
+        "title": "Transcription factor",
+        "context": "…ses are more accessible in the major groove tha",
+        "description": "Transcription factor\nContext: …ses are more accessible in the major groove tha",
+        "code": "DA"
+      },
+      {
+        "id": "L102",
+        "title": "Complementarity (molecular biology)",
+        "context": "…nucleobase on one strand bonds with just one ty",
+        "description": "Complementarity (molecular biology)\nContext: …nucleobase on one strand bonds with just one ty",
+        "code": "DB"
+      },
+      {
+        "id": "L103",
+        "title": "GC-content",
+        "context": "…e helix (from six-carbon ring to six-carbon rin",
+        "description": "GC-content\nContext: …e helix (from six-carbon ring to six-carbon rin",
+        "code": "DC"
+      },
+      {
+        "id": "L104",
+        "title": "Hoogsteen base pair",
+        "context": "…d a Watson-Crick base pair. DNA with high GC-co",
+        "description": "Hoogsteen base pair\nContext: …d a Watson-Crick base pair. DNA with high GC-co",
+        "code": "DD"
+      },
+      {
+        "id": "L105",
+        "title": "Temperature",
+        "context": "… DNA in a double helix can thus be pulled apart",
+        "description": "Temperature\nContext: … DNA in a double helix can thus be pulled apart",
+        "code": "DE"
+      },
+      {
+        "id": "L106",
+        "title": "PH",
+        "context": "…m two single-stranded DNA (ssDNA) molecules. Me",
+        "description": "PH\nContext: …m two single-stranded DNA (ssDNA) molecules. Me",
+        "code": "DF"
+      },
+      {
+        "id": "L107",
+        "title": "DNA melting",
+        "context": "…nger molecules are more stable). The stability ",
+        "description": "DNA melting\nContext: …nger molecules are more stable). The stability ",
+        "code": "DG"
+      },
+      {
+        "id": "L108",
+        "title": "Pribnow box",
+        "context": "…nds.[28] In biology, parts of the DNA double he",
+        "description": "Pribnow box\nContext: …nds.[28] In biology, parts of the DNA double he",
+        "code": "DH"
+      },
+      {
+        "id": "L109",
+        "title": "Promoter (biology)",
+        "context": "… parts of the DNA double helix that need to sep",
+        "description": "Promoter (biology)\nContext: … parts of the DNA double helix that need to sep",
+        "code": "DI"
+      },
+      {
+        "id": "L110",
+        "title": "Karyotype",
+        "context": "Schematic karyogram of a human. It shows 22 homo",
+        "description": "Karyotype\nContext: Schematic karyogram of a human. It shows 22 homo",
+        "code": "DJ"
+      },
+      {
+        "id": "L111",
+        "title": "Homologous chromosome",
+        "context": "Schematic karyogram of a human. It shows 22 homo",
+        "description": "Homologous chromosome\nContext: Schematic karyogram of a human. It shows 22 homo",
+        "code": "DK"
+      },
+      {
+        "id": "L112",
+        "title": "Sex chromosome",
+        "context": "… of a human. It shows 22 homologous chromosomes",
+        "description": "Sex chromosome\nContext: … of a human. It shows 22 homologous chromosomes",
+        "code": "DL"
+      },
+      {
+        "id": "L113",
+        "title": "Human mitochondrial genetics",
+        "context": "…s, both the female (XX) and male (XY) versions ",
+        "description": "Human mitochondrial genetics\nContext: …s, both the female (XX) and male (XY) versions ",
+        "code": "DM"
+      },
+      {
+        "id": "L114",
+        "title": "Diploid",
+        "context": "In humans, the total female diploid nuclear geno",
+        "description": "Diploid\nContext: In humans, the total female diploid nuclear geno",
+        "code": "DN"
+      },
+      {
+        "id": "L115",
+        "title": "Nuclear genome",
+        "context": "In humans, the total female diploid nuclear geno",
+        "description": "Nuclear genome\nContext: In humans, the total female diploid nuclear geno",
+        "code": "DO"
+      },
+      {
+        "id": "L116",
+        "title": "Chromosome 1",
+        "context": "…05.00 cm, 6.41 pg.[31] Each DNA polymer can con",
+        "description": "Chromosome 1\nContext: …05.00 cm, 6.41 pg.[31] Each DNA polymer can con",
+        "code": "DP"
+      },
+      {
+        "id": "L117",
+        "title": "Cell (biology)",
+        "context": "…Each human mitochondrion contains, on average, ",
+        "description": "Cell (biology)\nContext: …Each human mitochondrion contains, on average, ",
+        "code": "DR"
+      },
+      {
+        "id": "L118",
+        "title": "Egg cell",
+        "context": "…pproximately 500.[35] However, the amount of mi",
+        "description": "Egg cell\nContext: …pproximately 500.[35] However, the amount of mi",
+        "code": "DS"
+      },
+      {
+        "id": "L119",
+        "title": "Sense (molecular biology)",
+        "context": "Further information: Sense (molecular biology)",
+        "description": "Sense (molecular biology)\nContext: Further information: Sense (molecular biology)",
+        "code": "DT"
+      },
+      {
+        "id": "L120",
+        "title": "Sense and Antisense (Millennium)",
+        "context": "\"Sense and antisense\" redirects here. For the TV",
+        "description": "Sense and Antisense (Millennium)\nContext: \"Sense and antisense\" redirects here. For the TV",
+        "code": "DU"
+      },
+      {
+        "id": "L121",
+        "title": "DNA sequencing",
+        "context": "A DNA sequence is called a \"sense\" sequence if i",
+        "description": "DNA sequencing\nContext: A DNA sequence is called a \"sense\" sequence if i",
+        "code": "DV"
+      },
+      {
+        "id": "L122",
+        "title": "Messenger RNA",
+        "context": "A DNA sequence is called a \"sense\" sequence if i",
+        "description": "Messenger RNA\nContext: A DNA sequence is called a \"sense\" sequence if i",
+        "code": "DW"
+      },
+      {
+        "id": "L123",
+        "title": "Gene expression",
+        "context": "…ese RNAs are not entirely clear.[38] One propos",
+        "description": "Gene expression\nContext: …ese RNAs are not entirely clear.[38] One propos",
+        "code": "DX"
+      },
+      {
+        "id": "L124",
+        "title": "Plasmid",
+        "context": "A few DNA sequences in prokaryotes and eukaryote",
+        "description": "Plasmid\nContext: A few DNA sequences in prokaryotes and eukaryote",
+        "code": "DY"
+      },
+      {
+        "id": "L125",
+        "title": "Overlapping gene",
+        "context": "…nd more in plasmids and viruses, blur the disti",
+        "description": "Overlapping gene\nContext: …nd more in plasmids and viruses, blur the disti",
+        "code": "EA"
+      },
+      {
+        "id": "L126",
+        "title": "DNA supercoil",
+        "context": "Further information: DNA supercoil",
+        "description": "DNA supercoil\nContext: Further information: DNA supercoil",
+        "code": "EB"
+      },
+      {
+        "id": "L127",
+        "title": "Enzyme",
+        "context": "… come apart more easily. In nature, most DNA ha",
+        "description": "Enzyme\nContext: … come apart more easily. In nature, most DNA ha",
+        "code": "EC"
+      },
+      {
+        "id": "L128",
+        "title": "Topoisomerase",
+        "context": "…e easily. In nature, most DNA has slight negati",
+        "description": "Topoisomerase\nContext: …e easily. In nature, most DNA has slight negati",
+        "code": "ED"
+      },
+      {
+        "id": "L129",
+        "title": "Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid",
+        "context": "Further information: Molecular Structure of Nucl",
+        "description": "Molecular Structure of Nucleic Acids: A Structure for Deoxyribose Nucleic Acid\nContext: Further information: Molecular Structure of Nucl",
+        "code": "EE"
+      },
+      {
+        "id": "L130",
+        "title": "Molecular models of DNA",
+        "context": "Further information: Molecular Structure of Nucl",
+        "description": "Molecular models of DNA\nContext: Further information: Molecular Structure of Nucl",
+        "code": "EF"
+      },
+      {
+        "id": "L131",
+        "title": "DNA structure",
+        "context": "Further information: Molecular Structure of Nucl",
+        "description": "DNA structure\nContext: Further information: Molecular Structure of Nucl",
+        "code": "EG"
+      },
+      {
+        "id": "L132",
+        "title": "A-DNA",
+        "context": "From left to right, the structures of A, B and Z",
+        "description": "A-DNA\nContext: From left to right, the structures of A, B and Z",
+        "code": "EH"
+      },
+      {
+        "id": "L133",
+        "title": "Z-DNA",
+        "context": "From left to right, the structures of A, B and Z",
+        "description": "Z-DNA\nContext: From left to right, the structures of A, B and Z",
+        "code": "EI"
+      },
+      {
+        "id": "L134",
+        "title": "Conformational isomerism",
+        "context": "DNA exists in many possible conformations that i",
+        "description": "Conformational isomerism\nContext: DNA exists in many possible conformations that i",
+        "code": "EK"
+      },
+      {
+        "id": "L135",
+        "title": "Ion",
+        "context": "DNA exists in many possible conformations that i",
+        "description": "Ion\nContext: DNA exists in many possible conformations that i",
+        "code": "EL"
+      },
+      {
+        "id": "L136",
+        "title": "Polyamine",
+        "context": "… chemical modifications of the bases, the type ",
+        "description": "Polyamine\nContext: … chemical modifications of the bases, the type ",
+        "code": "EM"
+      },
+      {
+        "id": "L137",
+        "title": "X-ray diffraction",
+        "context": "The first published reports of A-DNA X-ray diffr",
+        "description": "X-ray diffraction\nContext: The first published reports of A-DNA X-ray diffr",
+        "code": "EN"
+      },
+      {
+        "id": "L138",
+        "title": "Patterson function",
+        "context": "…e first published reports of A-DNA X-ray diffra",
+        "description": "Patterson function\nContext: …e first published reports of A-DNA X-ray diffra",
+        "code": "EO"
+      },
+      {
+        "id": "L139",
+        "title": "In vivo",
+        "context": "…ented fibers of DNA.[47][48] An alternative ana",
+        "description": "In vivo\nContext: …ented fibers of DNA.[47][48] An alternative ana",
+        "code": "EP"
+      },
+      {
+        "id": "L140",
+        "title": "Bessel function",
+        "context": "…vo B-DNA X-ray diffraction-scattering patterns ",
+        "description": "Bessel function\nContext: …vo B-DNA X-ray diffraction-scattering patterns ",
+        "code": "EQ"
+      },
+      {
+        "id": "L141",
+        "title": "James Watson",
+        "context": "…rns of highly hydrated DNA fibers in terms of s",
+        "description": "James Watson\nContext: …rns of highly hydrated DNA fibers in terms of s",
+        "code": "ER"
+      },
+      {
+        "id": "L142",
+        "title": "Francis Crick",
+        "context": "…rated DNA fibers in terms of squares of Bessel ",
+        "description": "Francis Crick\nContext: …rated DNA fibers in terms of squares of Bessel ",
+        "code": "ES"
+      },
+      {
+        "id": "L143",
+        "title": "Paracrystalline",
+        "context": "…ells. Their corresponding X-ray diffraction and",
+        "description": "Paracrystalline\nContext: …ells. Their corresponding X-ray diffraction and",
+        "code": "ET"
+      },
+      {
+        "id": "L144",
+        "title": "Helix",
+        "context": "Compared to B-DNA, the A-DNA form is a wider rig",
+        "description": "Helix\nContext: Compared to B-DNA, the A-DNA form is a wider rig",
+        "code": "EU"
+      },
+      {
+        "id": "L145",
+        "title": "Methylation",
+        "context": "…d in enzyme-DNA complexes.[54][55] Segments of ",
+        "description": "Methylation\nContext: …d in enzyme-DNA complexes.[54][55] Segments of ",
+        "code": "EV"
+      },
+      {
+        "id": "L146",
+        "title": "Hypothetical types of biochemistry",
+        "context": "Further information: hypothetical types of bioch",
+        "description": "Hypothetical types of biochemistry\nContext: Further information: hypothetical types of bioch",
+        "code": "EW"
+      },
+      {
+        "id": "L147",
+        "title": "Astrobiology",
+        "context": "For many years, exobiologists have proposed the ",
+        "description": "Astrobiology\nContext: For many years, exobiologists have proposed the ",
+        "code": "EX"
+      },
+      {
+        "id": "L148",
+        "title": "Shadow biosphere",
+        "context": "For many years, exobiologists have proposed the ",
+        "description": "Shadow biosphere\nContext: For many years, exobiologists have proposed the ",
+        "code": "EZ"
+      },
+      {
+        "id": "L149",
+        "title": "Biosphere",
+        "context": "For many years, exobiologists have proposed the ",
+        "description": "Biosphere\nContext: For many years, exobiologists have proposed the ",
+        "code": "FA"
+      },
+      {
+        "id": "L150",
+        "title": "Arsenic DNA",
+        "context": "…r processes than currently known life. One of t",
+        "description": "Arsenic DNA\nContext: …r processes than currently known life. One of t",
+        "code": "FB"
+      },
+      {
+        "id": "L151",
+        "title": "Bacterium",
+        "context": "…lifeforms that use arsenic instead of phosphoru",
+        "description": "Bacterium\nContext: …lifeforms that use arsenic instead of phosphoru",
+        "code": "FC"
+      },
+      {
+        "id": "L152",
+        "title": "GFAJ-1",
+        "context": "…that use arsenic instead of phosphorus in DNA. ",
+        "description": "GFAJ-1\nContext: …that use arsenic instead of phosphorus in DNA. ",
+        "code": "FD"
+      },
+      {
+        "id": "L153",
+        "title": "G-quadruplex",
+        "context": "Further information: G-quadruplex",
+        "description": "G-quadruplex\nContext: Further information: G-quadruplex",
+        "code": "FE"
+      },
+      {
+        "id": "L154",
+        "title": "Telomere",
+        "context": "DNA quadruplex formed by telomere repeats. The l",
+        "description": "Telomere\nContext: DNA quadruplex formed by telomere repeats. The l",
+        "code": "FF"
+      },
+      {
+        "id": "L155",
+        "title": "Telomerase",
+        "context": "…e main function of these regions is to allow th",
+        "description": "Telomerase\nContext: …e main function of these regions is to allow th",
+        "code": "FG"
+      },
+      {
+        "id": "L156",
+        "title": "DNA repair",
+        "context": "… of chromosomes.[63] These specialized chromoso",
+        "description": "DNA repair\nContext: … of chromosomes.[63] These specialized chromoso",
+        "code": "FH"
+      },
+      {
+        "id": "L157",
+        "title": "List of distinct cell types in the adult human body",
+        "context": "…s, and stop the DNA repair systems in the cell ",
+        "description": "List of distinct cell types in the adult human body\nContext: …s, and stop the DNA repair systems in the cell ",
+        "code": "FI"
+      },
+      {
+        "id": "L158",
+        "title": "Guanine tetrad",
+        "context": "…rather than the usual base pairs found in other",
+        "description": "Guanine tetrad\nContext: …rather than the usual base pairs found in other",
+        "code": "FK"
+      },
+      {
+        "id": "L159",
+        "title": "Chelation",
+        "context": "…ructure.[66] These structures are stabilized by",
+        "description": "Chelation\nContext: …ructure.[66] These structures are stabilized by",
+        "code": "FL"
+      },
+      {
+        "id": "L160",
+        "title": "Triple-stranded DNA",
+        "context": "… telomere strand disrupting the double-helical ",
+        "description": "Triple-stranded DNA\nContext: … telomere strand disrupting the double-helical ",
+        "code": "FM"
+      },
+      {
+        "id": "L161",
+        "title": "D-loop",
+        "context": "… pairing to one of the two strands. This triple",
+        "description": "D-loop\nContext: … pairing to one of the two strands. This triple",
+        "code": "FN"
+      },
+      {
+        "id": "L162",
+        "title": "Branched DNA",
+        "context": "Further information: Branched DNA and DNA nanote",
+        "description": "Branched DNA\nContext: Further information: Branched DNA and DNA nanote",
+        "code": "FO"
+      },
+      {
+        "id": "L163",
+        "title": "DNA nanotechnology",
+        "context": "Further information: Branched DNA and DNA nanote",
+        "description": "DNA nanotechnology\nContext: Further information: Branched DNA and DNA nanote",
+        "code": "FP"
+      },
+      {
+        "id": "L164",
+        "title": "DNA end",
+        "context": "In DNA, fraying occurs when non-complementary re",
+        "description": "DNA end\nContext: In DNA, fraying occurs when non-complementary re",
+        "code": "FR"
+      },
+      {
+        "id": "L165",
+        "title": "Nanotechnology",
+        "context": "…volving additional strands and multiple branche",
+        "description": "Nanotechnology\nContext: …volving additional strands and multiple branche",
+        "code": "FS"
+      },
+      {
+        "id": "L166",
+        "title": "Hachimoji DNA",
+        "context": "…cleobases have been synthesized, and successful",
+        "description": "Hachimoji DNA\nContext: …cleobases have been synthesized, and successful",
+        "code": "FT"
+      },
+      {
+        "id": "L167",
+        "title": "Principle of least effort",
+        "context": "…corresponding RNA,[72] while a higher number is",
+        "description": "Principle of least effort\nContext: …corresponding RNA,[72] while a higher number is",
+        "code": "FU"
+      },
+      {
+        "id": "L168",
+        "title": "Acid",
+        "context": "The phosphate groups of DNA give it similar acid",
+        "description": "Acid\nContext: The phosphate groups of DNA give it similar acid",
+        "code": "FW"
+      },
+      {
+        "id": "L169",
+        "title": "Phosphoric acid",
+        "context": "The phosphate groups of DNA give it similar acid",
+        "description": "Phosphoric acid\nContext: The phosphate groups of DNA give it similar acid",
+        "code": "FX"
+      },
+      {
+        "id": "L170",
+        "title": "Acid strength",
+        "context": "…te groups of DNA give it similar acidic propert",
+        "description": "Acid strength\nContext: …te groups of DNA give it similar acidic propert",
+        "code": "FY"
+      },
+      {
+        "id": "L171",
+        "title": "Proton",
+        "context": "… it can be considered as a strong acid. It will",
+        "description": "Proton\nContext: … it can be considered as a strong acid. It will",
+        "code": "GA"
+      },
+      {
+        "id": "L172",
+        "title": "Hydrolysis",
+        "context": "…hind negative charges on the phosphate groups. ",
+        "description": "Hydrolysis\nContext: …hind negative charges on the phosphate groups. ",
+        "code": "GB"
+      },
+      {
+        "id": "L173",
+        "title": "Nucleophile",
+        "context": "… the phosphate groups. These negative charges p",
+        "description": "Nucleophile\nContext: … the phosphate groups. These negative charges p",
+        "code": "GC"
+      },
+      {
+        "id": "L174",
+        "title": "DNA methylation",
+        "context": "Further information: DNA methylation and Chromat",
+        "description": "DNA methylation\nContext: Further information: DNA methylation and Chromat",
+        "code": "GD"
+      },
+      {
+        "id": "L175",
+        "title": "Chromatin remodeling",
+        "context": "Further information: DNA methylation and Chromat",
+        "description": "Chromatin remodeling\nContext: Further information: DNA methylation and Chromat",
+        "code": "GE"
+      },
+      {
+        "id": "L176",
+        "title": "5-Methylcytosine",
+        "context": "5-methylcytosine",
+        "description": "5-Methylcytosine\nContext: 5-methylcytosine",
+        "code": "GF"
+      },
+      {
+        "id": "L177",
+        "title": "Deamination",
+        "context": "Structure of cytosine with and without the 5-met",
+        "description": "Deamination\nContext: Structure of cytosine with and without the 5-met",
+        "code": "GG"
+      },
+      {
+        "id": "L178",
+        "title": "Crosstalk (biology)",
+        "context": "…deling carried out by chromatin remodeling comp",
+        "description": "Crosstalk (biology)\nContext: …deling carried out by chromatin remodeling comp",
+        "code": "GH"
+      },
+      {
+        "id": "L179",
+        "title": "X-inactivation",
+        "context": "For one example, cytosine methylation produces 5",
+        "description": "X-inactivation\nContext: For one example, cytosine methylation produces 5",
+        "code": "GI"
+      },
+      {
+        "id": "L180",
+        "title": "Caenorhabditis elegans",
+        "context": "…inactivation of chromosomes.[76] The average le",
+        "description": "Caenorhabditis elegans\nContext: …inactivation of chromosomes.[76] The average le",
+        "code": "GL"
+      },
+      {
+        "id": "L181",
+        "title": "Vertebrate",
+        "context": "…hylation varies between organisms—the worm Caen",
+        "description": "Vertebrate\nContext: …hylation varies between organisms—the worm Caen",
+        "code": "GM"
+      },
+      {
+        "id": "L182",
+        "title": "Mutation",
+        "context": "…tosine, it can deaminate to leave a thymine bas",
+        "description": "Mutation\nContext: …tosine, it can deaminate to leave a thymine bas",
+        "code": "GN"
+      },
+      {
+        "id": "L183",
+        "title": "5-hydroxymethylcytosine",
+        "context": "…to mutations.[78] Other base modifications incl",
+        "description": "5-hydroxymethylcytosine\nContext: …to mutations.[78] Other base modifications incl",
+        "code": "GO"
+      },
+      {
+        "id": "L184",
+        "title": "Brain",
+        "context": "…difications include adenine methylation in bact",
+        "description": "Brain\nContext: …difications include adenine methylation in bact",
+        "code": "GP"
+      },
+      {
+        "id": "L185",
+        "title": "Glycosylation",
+        "context": "… adenine methylation in bacteria, the presence ",
+        "description": "Glycosylation\nContext: … adenine methylation in bacteria, the presence ",
+        "code": "GR"
+      },
+      {
+        "id": "L186",
+        "title": "Kinetoplastida",
+        "context": "…-hydroxymethylcytosine in the brain,[79] and th",
+        "description": "Kinetoplastida\nContext: …-hydroxymethylcytosine in the brain,[79] and th",
+        "code": "GS"
+      },
+      {
+        "id": "L187",
+        "title": "DNA damage (naturally occurring)",
+        "context": "Further information: DNA damage (naturally occur",
+        "description": "DNA damage (naturally occurring)\nContext: Further information: DNA damage (naturally occur",
+        "code": "GT"
+      },
+      {
+        "id": "L188",
+        "title": "DNA damage theory of aging",
+        "context": "Further information: DNA damage (naturally occur",
+        "description": "DNA damage theory of aging\nContext: Further information: DNA damage (naturally occur",
+        "code": "GU"
+      },
+      {
+        "id": "L189",
+        "title": "Covalent",
+        "context": "A covalent adduct between a metabolically activa",
+        "description": "Covalent\nContext: A covalent adduct between a metabolically activa",
+        "code": "GV"
+      },
+      {
+        "id": "L190",
+        "title": "Adduct",
+        "context": "A covalent adduct between a metabolically activa",
+        "description": "Adduct\nContext: A covalent adduct between a metabolically activa",
+        "code": "GW"
+      },
+      {
+        "id": "L191",
+        "title": "Cytochrome P450, family 1, member A1",
+        "context": "A covalent adduct between a metabolically activa",
+        "description": "Cytochrome P450, family 1, member A1\nContext: A covalent adduct between a metabolically activa",
+        "code": "GX"
+      },
+      {
+        "id": "L192",
+        "title": "Benzo(a)pyrene",
+        "context": "A covalent adduct between a metabolically activa",
+        "description": "Benzo(a)pyrene\nContext: A covalent adduct between a metabolically activa",
+        "code": "GY"
+      },
+      {
+        "id": "L193",
+        "title": "Mutagen",
+        "context": "A covalent adduct between a metabolically activa",
+        "description": "Mutagen\nContext: A covalent adduct between a metabolically activa",
+        "code": "HA"
+      },
+      {
+        "id": "L194",
+        "title": "Tobacco smoking",
+        "context": "A covalent adduct between a metabolically activa",
+        "description": "Tobacco smoking\nContext: A covalent adduct between a metabolically activa",
+        "code": "HB"
+      },
+      {
+        "id": "L195",
+        "title": "Oxidizing agent",
+        "context": "DNA can be damaged by many sorts of mutagens, wh",
+        "description": "Oxidizing agent\nContext: DNA can be damaged by many sorts of mutagens, wh",
+        "code": "HC"
+      },
+      {
+        "id": "L196",
+        "title": "Alkylation",
+        "context": "…amaged by many sorts of mutagens, which change ",
+        "description": "Alkylation\nContext: …amaged by many sorts of mutagens, which change ",
+        "code": "HD"
+      },
+      {
+        "id": "L197",
+        "title": "Electromagnetic radiation",
+        "context": "… change the DNA sequence. Mutagens include oxid",
+        "description": "Electromagnetic radiation\nContext: … change the DNA sequence. Mutagens include oxid",
+        "code": "HE"
+      },
+      {
+        "id": "L198",
+        "title": "Ultraviolet",
+        "context": "… include oxidizing agents, alkylating agents an",
+        "description": "Ultraviolet\nContext: … include oxidizing agents, alkylating agents an",
+        "code": "HF"
+      },
+      {
+        "id": "L199",
+        "title": "X-ray",
+        "context": "…nts, alkylating agents and also high-energy ele",
+        "description": "X-ray\nContext: …nts, alkylating agents and also high-energy ele",
+        "code": "HG"
+      },
+      {
+        "id": "L200",
+        "title": "Thymine dimer",
+        "context": "…A damage produced depends on the type of mutage",
+        "description": "Thymine dimer\nContext: …A damage produced depends on the type of mutage",
+        "code": "HH"
+      },
+      {
+        "id": "L201",
+        "title": "Radical (chemistry)",
+        "context": "…ine dimers, which are cross-links between pyrim",
+        "description": "Radical (chemistry)\nContext: …ine dimers, which are cross-links between pyrim",
+        "code": "HI"
+      },
+      {
+        "id": "L202",
+        "title": "Hydrogen peroxide",
+        "context": "… are cross-links between pyrimidine bases.[83] ",
+        "description": "Hydrogen peroxide\nContext: … are cross-links between pyrimidine bases.[83] ",
+        "code": "HK"
+      },
+      {
+        "id": "L203",
+        "title": "Point mutation",
+        "context": "…ions, the most dangerous are double-strand brea",
+        "description": "Point mutation\nContext: …ions, the most dangerous are double-strand brea",
+        "code": "HL"
+      },
+      {
+        "id": "L204",
+        "title": "Genetic insertion",
+        "context": "…ngerous are double-strand breaks, as these are ",
+        "description": "Genetic insertion\nContext: …ngerous are double-strand breaks, as these are ",
+        "code": "HM"
+      },
+      {
+        "id": "L205",
+        "title": "Deletion (genetics)",
+        "context": "…double-strand breaks, as these are difficult to",
+        "description": "Deletion (genetics)\nContext: …double-strand breaks, as these are difficult to",
+        "code": "HN"
+      },
+      {
+        "id": "L206",
+        "title": "Chromosomal translocation",
+        "context": "…fficult to repair and can produce point mutatio",
+        "description": "Chromosomal translocation\nContext: …fficult to repair and can produce point mutatio",
+        "code": "HO"
+      },
+      {
+        "id": "L207",
+        "title": "Cancer",
+        "context": "…ons, deletions from the DNA sequence, and chrom",
+        "description": "Cancer\nContext: …ons, deletions from the DNA sequence, and chrom",
+        "code": "HP"
+      },
+      {
+        "id": "L208",
+        "title": "Intercalation (biochemistry)",
+        "context": "Many mutagens fit into the space between two adj",
+        "description": "Intercalation (biochemistry)\nContext: Many mutagens fit into the space between two adj",
+        "code": "HQ"
+      },
+      {
+        "id": "L209",
+        "title": "Aromaticity",
+        "context": "…nto the space between two adjacent base pairs, ",
+        "description": "Aromaticity\nContext: …nto the space between two adjacent base pairs, ",
+        "code": "HR"
+      },
+      {
+        "id": "L210",
+        "title": "Ethidium bromide",
+        "context": "…his is called intercalation. Most intercalators",
+        "description": "Ethidium bromide\nContext: …his is called intercalation. Most intercalators",
+        "code": "HS"
+      },
+      {
+        "id": "L211",
+        "title": "Acridine",
+        "context": "…rcalation. Most intercalators are aromatic and ",
+        "description": "Acridine\nContext: …rcalation. Most intercalators are aromatic and ",
+        "code": "HT"
+      },
+      {
+        "id": "L212",
+        "title": "Daunorubicin",
+        "context": "…Most intercalators are aromatic and planar mole",
+        "description": "Daunorubicin\nContext: …Most intercalators are aromatic and planar mole",
+        "code": "HU"
+      },
+      {
+        "id": "L213",
+        "title": "Doxorubicin",
+        "context": "…rs are aromatic and planar molecules; examples ",
+        "description": "Doxorubicin\nContext: …rs are aromatic and planar molecules; examples ",
+        "code": "HV"
+      },
+      {
+        "id": "L214",
+        "title": "Carcinogen",
+        "context": "…tion and DNA replication, causing toxicity and ",
+        "description": "Carcinogen\nContext: …tion and DNA replication, causing toxicity and ",
+        "code": "HW"
+      },
+      {
+        "id": "L215",
+        "title": "Teratogen",
+        "context": "…mutations.[92] As a result, DNA intercalators m",
+        "description": "Teratogen\nContext: …mutations.[92] As a result, DNA intercalators m",
+        "code": "HX"
+      },
+      {
+        "id": "L216",
+        "title": "Aflatoxin",
+        "context": "…ns, and in the case of thalidomide, a teratogen",
+        "description": "Aflatoxin\nContext: …ns, and in the case of thalidomide, a teratogen",
+        "code": "HY"
+      },
+      {
+        "id": "L217",
+        "title": "Chemotherapy",
+        "context": "…o their ability to inhibit DNA transcription an",
+        "description": "Chemotherapy\nContext: …o their ability to inhibit DNA transcription an",
+        "code": "HZ"
+      },
+      {
+        "id": "L218",
+        "title": "Circular prokaryote chromosome",
+        "context": "DNA usually occurs as linear chromosomes in euka",
+        "description": "Circular prokaryote chromosome\nContext: DNA usually occurs as linear chromosomes in euka",
+        "code": "IA"
+      },
+      {
+        "id": "L219",
+        "title": "Human genome",
+        "context": "… and circular chromosomes in prokaryotes. The s",
+        "description": "Human genome\nContext: … and circular chromosomes in prokaryotes. The s",
+        "code": "IB"
+      },
+      {
+        "id": "L220",
+        "title": "DNA sequence",
+        "context": "…n base pairs of DNA arranged into 46 chromosome",
+        "description": "DNA sequence\nContext: …n base pairs of DNA arranged into 46 chromosome",
+        "code": "IC"
+      },
+      {
+        "id": "L221",
+        "title": "Transmission (genetics)",
+        "context": "…omosomes.[96] The information carried by DNA is",
+        "description": "Transmission (genetics)\nContext: …omosomes.[96] The information carried by DNA is",
+        "code": "ID"
+      },
+      {
+        "id": "L222",
+        "title": "Peptide sequence",
+        "context": "…een the DNA and the correct RNA nucleotides. Us",
+        "description": "Peptide sequence\nContext: …een the DNA and the correct RNA nucleotides. Us",
+        "code": "IE"
+      },
+      {
+        "id": "L223",
+        "title": "Translation (biology)",
+        "context": "…otides. Usually, this RNA copy is then used to ",
+        "description": "Translation (biology)\nContext: …otides. Usually, this RNA copy is then used to ",
+        "code": "IF"
+      },
+      {
+        "id": "L224",
+        "title": "DNA condensation",
+        "context": "Genomic DNA is tightly and orderly packed in the",
+        "description": "DNA condensation\nContext: Genomic DNA is tightly and orderly packed in the",
+        "code": "IG"
+      },
+      {
+        "id": "L225",
+        "title": "Nucleoid",
+        "context": "…asts. In prokaryotes, the DNA is held within an",
+        "description": "Nucleoid\nContext: …asts. In prokaryotes, the DNA is held within an",
+        "code": "IH"
+      },
+      {
+        "id": "L226",
+        "title": "Junk DNA",
+        "context": "… in humans less than 10% of the genome has a de",
+        "description": "Junk DNA\nContext: … in humans less than 10% of the genome has a de",
+        "code": "II"
+      },
+      {
+        "id": "L227",
+        "title": "Protein biosynthesis",
+        "context": "Further information: Genetic code, Transcription",
+        "description": "Protein biosynthesis\nContext: Further information: Genetic code, Transcription",
+        "code": "IJ"
+      },
+      {
+        "id": "L228",
+        "title": "RNA polymerase",
+        "context": "In transcription, the codons of a gene are copie",
+        "description": "RNA polymerase\nContext: In transcription, the codons of a gene are copie",
+        "code": "IK"
+      },
+      {
+        "id": "L229",
+        "title": "Ribosome",
+        "context": "…odons of a gene are copied into messenger RNA b",
+        "description": "Ribosome\nContext: …odons of a gene are copied into messenger RNA b",
+        "code": "IL"
+      },
+      {
+        "id": "L230",
+        "title": "Transfer RNA",
+        "context": "…copy is then decoded by a ribosome that reads t",
+        "description": "Transfer RNA\nContext: …copy is then decoded by a ribosome that reads t",
+        "code": "IM"
+      },
+      {
+        "id": "L231",
+        "title": "List of standard amino acids",
+        "context": "…s in 3-letter combinations, there are 64 possib",
+        "description": "List of standard amino acids\nContext: …s in 3-letter combinations, there are 64 possib",
+        "code": "IN"
+      },
+      {
+        "id": "L232",
+        "title": "Helicase",
+        "context": "DNA replication: The double helix is unwound by ",
+        "description": "Helicase\nContext: DNA replication: The double helix is unwound by ",
+        "code": "IO"
+      },
+      {
+        "id": "L233",
+        "title": "DNA polymerase",
+        "context": "DNA replication: The double helix is unwound by ",
+        "description": "DNA polymerase\nContext: DNA replication: The double helix is unwound by ",
+        "code": "IP"
+      },
+      {
+        "id": "L234",
+        "title": "Replication fork",
+        "context": "…he double helix is unwound by a helicase and to",
+        "description": "Replication fork\nContext: …he double helix is unwound by a helicase and to",
+        "code": "IQ"
+      },
+      {
+        "id": "L235",
+        "title": "Okazaki fragment",
+        "context": "…nother DNA polymerase binds to the lagging stra",
+        "description": "Okazaki fragment\nContext: …nother DNA polymerase binds to the lagging stra",
+        "code": "IR"
+      },
+      {
+        "id": "L236",
+        "title": "DNA ligase",
+        "context": "…s to the lagging strand. This enzyme makes disc",
+        "description": "DNA ligase\nContext: …s to the lagging strand. This enzyme makes disc",
+        "code": "IS"
+      },
+      {
+        "id": "L237",
+        "title": "Complementary DNA",
+        "context": "… a simple mechanism for DNA replication. Here, ",
+        "description": "Complementary DNA\nContext: … a simple mechanism for DNA replication. Here, ",
+        "code": "IT"
+      },
+      {
+        "id": "L238",
+        "title": "Horizontal gene transfer",
+        "context": "… high at 88 μg/L.[99] Various possible function",
+        "description": "Horizontal gene transfer\nContext: … high at 88 μg/L.[99] Various possible function",
+        "code": "IU"
+      },
+      {
+        "id": "L239",
+        "title": "Biofilm",
+        "context": "…s or antibiotics.[102] Extracellular DNA acts a",
+        "description": "Biofilm\nContext: …s or antibiotics.[102] Extracellular DNA acts a",
+        "code": "IV"
+      },
+      {
+        "id": "L240",
+        "title": "Cell-free fetal DNA",
+        "context": "Cell-free fetal DNA is found in the blood of the",
+        "description": "Cell-free fetal DNA\nContext: Cell-free fetal DNA is found in the blood of the",
+        "code": "IW"
+      },
+      {
+        "id": "L241",
+        "title": "Environmental DNA",
+        "context": "Under the name of environmental DNA eDNA has see",
+        "description": "Environmental DNA\nContext: Under the name of environmental DNA eDNA has see",
+        "code": "IX"
+      },
+      {
+        "id": "L242",
+        "title": "Ecology",
+        "context": "Under the name of environmental DNA eDNA has see",
+        "description": "Ecology\nContext: Under the name of environmental DNA eDNA has see",
+        "code": "IZ"
+      },
+      {
+        "id": "L243",
+        "title": "Protein interactions",
+        "context": "All the functions of DNA depend on interactions ",
+        "description": "Protein interactions\nContext: All the functions of DNA depend on interactions ",
+        "code": "JA"
+      },
+      {
+        "id": "L244",
+        "title": "DNA-binding protein",
+        "context": "Further information: DNA-binding protein",
+        "description": "DNA-binding protein\nContext: Further information: DNA-binding protein",
+        "code": "JB"
+      },
+      {
+        "id": "L245",
+        "title": "Nucleosome",
+        "context": "…multiple types of proteins are involved.[109][1",
+        "description": "Nucleosome\nContext: …multiple types of proteins are involved.[109][1",
+        "code": "JC"
+      },
+      {
+        "id": "L246",
+        "title": "Ionic bond",
+        "context": "… surface. These non-specific interactions are f",
+        "description": "Ionic bond\nContext: … surface. These non-specific interactions are f",
+        "code": "JD"
+      },
+      {
+        "id": "L247",
+        "title": "Phosphorylation",
+        "context": "… base sequence.[111] Chemical modifications of ",
+        "description": "Phosphorylation\nContext: … base sequence.[111] Chemical modifications of ",
+        "code": "JE"
+      },
+      {
+        "id": "L248",
+        "title": "Acetylation",
+        "context": "…Chemical modifications of these basic amino aci",
+        "description": "Acetylation\nContext: …Chemical modifications of these basic amino aci",
+        "code": "JI"
+      },
+      {
+        "id": "L249",
+        "title": "Protein A",
+        "context": "…eins is the DNA-binding proteins that specifica",
+        "description": "Protein A\nContext: …eins is the DNA-binding proteins that specifica",
+        "code": "JJ"
+      },
+      {
+        "id": "L250",
+        "title": "Stem-loop",
+        "context": "…pair.[116] These binding proteins seem to stabi",
+        "description": "Stem-loop\nContext: …pair.[116] These binding proteins seem to stabi",
+        "code": "JK"
+      },
+      {
+        "id": "L251",
+        "title": "Nuclease",
+        "context": "…s seem to stabilize single-stranded DNA and pro",
+        "description": "Nuclease\nContext: …s seem to stabilize single-stranded DNA and pro",
+        "code": "JM"
+      },
+      {
+        "id": "L252",
+        "title": "Helix-turn-helix",
+        "context": "The lambda repressor helix-turn-helix transcript",
+        "description": "Helix-turn-helix\nContext: The lambda repressor helix-turn-helix transcript",
+        "code": "JO"
+      },
+      {
+        "id": "L253",
+        "title": "Signal transduction",
+        "context": "…actor can affect thousands of genes.[120] Conse",
+        "description": "Signal transduction\nContext: …actor can affect thousands of genes.[120] Conse",
+        "code": "JP"
+      },
+      {
+        "id": "L254",
+        "title": "Cellular differentiation",
+        "context": "…the targets of the signal transduction processe",
+        "description": "Cellular differentiation\nContext: …the targets of the signal transduction processe",
+        "code": "JR"
+      },
+      {
+        "id": "L255",
+        "title": "EcoRV",
+        "context": "The restriction enzyme EcoRV (green) in a comple",
+        "description": "EcoRV\nContext: The restriction enzyme EcoRV (green) in a comple",
+        "code": "JS"
+      },
+      {
+        "id": "L256",
+        "title": "Exonuclease",
+        "context": "… phosphodiester bonds. Nucleases that hydrolyse",
+        "description": "Exonuclease\nContext: … phosphodiester bonds. Nucleases that hydrolyse",
+        "code": "JT"
+      }
+    ],
+    "sha256": "6fa48bf604df554600c3fbce2ec91e36ffc317eae2cca3daacc7abe26cecd958"
+  }
+}

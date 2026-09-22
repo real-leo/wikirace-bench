@@ -1,0 +1,7 @@
+{
+  "complete": true,
+  "manipur_candidates_verified": 505,
+  "fixed_probe_calls_rechecked": 93,
+  "fixed_probe_inputs_and_token_audits_unchanged": true,
+  "cause": "Transformers runtime pre-tokenizer differs from raw tokenizer.json on Devanagari; shared planner now uses the exact runtime pre-tokenizer."
+}

@@ -1,0 +1,2 @@
+# Unified-diff context lines contain one space for an empty source line.
+reports/*.patch whitespace=-blank-at-eol

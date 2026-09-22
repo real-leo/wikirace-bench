@@ -6,7 +6,7 @@ from wikirace.env import PAGE_CHOICE_LIMIT
 from wikirace.state import Action, LinkScore
 
 PAGE_SCORE_BATCH = 64
-PROMPT_VERSION = "page-target-v1"
+PROMPT_VERSION = "page-target-v2-255"
 LEVELS = [
     "Unrelated to the specific target, or points to a conflicting location/entity.",
     "Only a broad shared topic or word; little evidence of a useful route.",
@@ -45,6 +45,9 @@ def _candidate(candidate):
 
 def score_page(brain, state):
     candidates = state.candidates
+    if getattr(brain, "page_selection_policy", "score-255") == "grouped-all":
+        return [], {"page_policy": "grouped-all", "n_page_links": len(state.page_links),
+                    "n_eligible_links": len(candidates), "prompt_version": "page-grouped-all-v1"}
     if len(candidates) <= PAGE_CHOICE_LIMIT:
         return [], {"page_policy": "direct_choice", "n_page_links": len(state.page_links),
                     "n_eligible_links": len(candidates), "prompt_version": PROMPT_VERSION}
@@ -65,7 +68,8 @@ def score_page(brain, state):
             response = brain._post(payload)
         except Exception as exc:
             # Retain completed batches if a later batch hits the deadline.
-            exc.brain_debug = {"score_batches": batches, "n_scored": len(scored),
+            exc.brain_debug = {**getattr(exc, "brain_debug", {}),
+                               "score_batches": batches, "n_scored": len(scored),
                                "prompt_version": PROMPT_VERSION, "partial_scoring": True}
             raise
         batches.append({"score_request": payload, "score_response": response})
@@ -86,7 +90,8 @@ def score_page(brain, state):
 def choose_page(brain, state):
     if not state.candidates:
         return Action(action="click", link_id=""), {"fail_reason": "page_links_empty"}
-    if len(state.candidates) > PAGE_CHOICE_LIMIT:
+    grouped = getattr(brain, "page_selection_policy", "score-255") == "grouped-all"
+    if len(state.candidates) > PAGE_CHOICE_LIMIT and not grouped:
         raise ValueError("page_shortlist_not_refreshed")
     payload = {"model": brain.model, "state": _state(state), "questions": {
         "next": {"type": "choice", "instructions": {
@@ -100,6 +105,7 @@ def choose_page(brain, state):
     if choice not in payload["questions"]["next"]["criteria"]:
         raise ValueError(f"invalid_page_choice:{choice}")
     return Action(action="click", link_id=choice), {
-        "request": payload, "response": response, "prompt_version": PROMPT_VERSION,
+        "request": payload, "response": response,
+        "prompt_version": "page-grouped-all-v1" if grouped else PROMPT_VERSION,
         "choice_candidate_count": len(state.candidates), "finalist_mode": False,
     }

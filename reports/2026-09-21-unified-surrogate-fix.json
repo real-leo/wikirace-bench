@@ -1,0 +1,179 @@
+{
+  "complete": true,
+  "before_fingerprint": "12ddc56f582e0613430b47a6762648cb02022088171e5dc0c6dbfae2486a2c1b",
+  "after_fingerprint": "2a819ffc11597af4e295b4f3f3aae9c02455750633552d7904fe8e771df5c81d",
+  "changed_runtime_files": [
+    "wikirace/browser.py"
+  ],
+  "preserved_files": [
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/jev/hard-dna.json",
+      "sha256": "639f308ec9c907c1283f6396f3768c78dd4e11f53fc7e6e9b18e857d616a3cef",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/jev/hard-dna.summary.json",
+      "sha256": "e43a701319bfe527a9088107ba9656b0dfaa9a120c2d357b18d3b3925ae7c5fc",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/jev/hard-music.json",
+      "sha256": "cfb3ea4f4118b8cbfbee474560717796960f5c99b38555b36c241312d62b5614",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/jev/hard-music.summary.json",
+      "sha256": "4ec6ee49e85cec239472af9acbdc5189d3c3b00616f0935c58e46961067c8baa",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/jev/hard-wwii.json",
+      "sha256": "393416023422f6519f2c69daff1dd9d2d65b51d9e245ca493a16bf26eadbd880",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/jev/hard-wwii.summary.json",
+      "sha256": "9ef9894403e80a52cda4bed71aff9877aac2d93a502c7a772f99421d512cfc2c",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/semif/hard-dna.json",
+      "sha256": "d2980d23332a7261a5e5134198f2b351dc3c93e68ebf22ca0daa909ea6924bfe",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/semif/hard-dna.summary.json",
+      "sha256": "63dbe3a823d01f36adb823c11ad84fa57493b983ffd788c863e0a004c33b3642",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/semif/hard-music.json",
+      "sha256": "73159181156e897c52e5dda3adfdcd734ab8a0740ac0ef81794649c696e49920",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/semif/hard-music.summary.json",
+      "sha256": "660048939602f00960c951b887c02e07884461c250c1ae6838ab5716ff2cdaac",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/semif/hard-wwii.json",
+      "sha256": "35fda330526db51b76a3dd5588b1b078daeeedca6e6980cf42928a198ed24cc1",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/race/semif/hard-wwii.summary.json",
+      "sha256": "ca4dd066867d0a9a2f094c44cd7aa068cbae610e8473549b940e8dd57d7216a7",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/probe/jev/metadata.json",
+      "sha256": "59513fb57e08184c3c3c5a7b7428408851436214b7808d417281ec8a3c5cb223",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/probe/jev/probe.json",
+      "sha256": "19a26332feb5dab7bf740ac249c2cb6a8abeb7c916995efcdc875dbaebca8853",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/probe/laya-mlx/metadata.json",
+      "sha256": "06a3e5820bb2f32d4e8962877a90df208f073382afee8fcac3fc4b4c345f12b6",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/probe/laya-mlx/probe.json",
+      "sha256": "567eb6ffbec37b9d421288c20748f8eac0792fdea4552ca445792359034c8ad1",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/probe/semif/metadata.json",
+      "sha256": "1b2ffc5e99066f9b8fb31f5db4b4dc442d821a0f95db8e014365ee68a2698c89",
+      "valid_unicode": true
+    },
+    {
+      "path": "runs/unified-255/2026-09-21-v3/probe/semif/probe.json",
+      "sha256": "d4ecc675a7c235782ffed0e4fa7208966b832b169ea141a47d468a47eb04f491",
+      "valid_unicode": true
+    }
+  ],
+  "created_at": "2026-09-21T19:58:59.921751+08:00",
+  "saved_results_unchanged": true,
+  "live_page_verified": true,
+  "live_page": {
+    "title": "Quantum mechanics",
+    "links": 588,
+    "eligible_candidates": 584,
+    "malformed_fields_before": [
+      {
+        "index": 125,
+        "field": "context",
+        "old": "\u2026r both \ud835\udc4b and \ud835\udc43 , and moreover for powers of them. Defining the uncertainty for an observable by a standard deviation, we have \ud835\udf0e \ud835\udc4b = \u27e8 \ud835\udc4b 2 \u27e9 \u2212 \u27e8 \ud835\udc4b \u27e9 2 , and likewise for the momentum: \ud835\udf0e \ud835\udc43 = \u27e8 \ud835\udc43 2 \u27e9 \u2212 \u27e8 \ud835\udc43 \u27e9 2 . The uncertainty principle states that \ud835\u2026",
+        "new": "\u2026r both \ud835\udc4b and \ud835\udc43 , and moreover for powers of them. Defining the uncertainty for an observable by a standard deviation, we have \ud835\udf0e \ud835\udc4b = \u27e8 \ud835\udc4b 2 \u27e9 \u2212 \u27e8 \ud835\udc4b \u27e9 2 , and likewise for the momentum: \ud835\udf0e \ud835\udc43 = \u27e8 \ud835\udc43 2 \u27e9 \u2212 \u27e8 \ud835\udc43 \u27e9 2 . The uncertainty principle states that \u2026"
+      },
+      {
+        "index": 126,
+        "field": "context",
+        "old": "\u2026ously.[28] This inequality generalizes to arbitrary pairs of self-adjoint operators \ud835\udc34 and \ud835\udc35 . The commutator of these two operators is [ \ud835\udc34 , \ud835\udc35 ] = \ud835\udc34 \ud835\udc35 \u2212 \ud835\udc35 \ud835\udc34 , and this provides the lower bound on the product of standard deviations: \ud835\udf0e \ud835\udc34 \ud835\udf0e \ud835\u2026",
+        "new": "\u2026ously.[28] This inequality generalizes to arbitrary pairs of self-adjoint operators \ud835\udc34 and \ud835\udc35 . The commutator of these two operators is [ \ud835\udc34 , \ud835\udc35 ] = \ud835\udc34 \ud835\udc35 \u2212 \ud835\udc35 \ud835\udc34 , and this provides the lower bound on the product of standard deviations: \ud835\udf0e \ud835\udc34 \ud835\udf0e \u2026"
+      },
+      {
+        "index": 160,
+        "field": "context",
+        "old": "\u2026\udf14 \ud835\udf0b \u210f ) 1 / 4 \u22c5 \ud835\udc52 \u2212 \ud835\udc5a \ud835\udf14 \ud835\udc65 2 2 \u210f \u22c5 \ud835\udc3b \ud835\udc5b ( \ud835\udc5a \ud835\udf14 \u210f \ud835\udc65 ) , \ud835\udc5b = 0 , 1 , 2 , \u2026 . where Hn are the Hermite polynomials \ud835\udc3b \ud835\udc5b ( \ud835\udc65 ) = ( \u2212 1 ) \ud835\udc5b \ud835\udc52 \ud835\udc65 2 \ud835\udc51 \ud835\udc5b \ud835\udc51 \ud835\udc65 \ud835\udc5b ( \ud835\udc52 \u2212 \ud835\udc65 2 ) , and the corresponding energy levels are \ud835\udc38 \ud835\udc5b = \u210f \ud835\udf14 ( \ud835\udc5b + 1 2 ) .",
+        "new": "\u2026 \ud835\udf0b \u210f ) 1 / 4 \u22c5 \ud835\udc52 \u2212 \ud835\udc5a \ud835\udf14 \ud835\udc65 2 2 \u210f \u22c5 \ud835\udc3b \ud835\udc5b ( \ud835\udc5a \ud835\udf14 \u210f \ud835\udc65 ) , \ud835\udc5b = 0 , 1 , 2 , \u2026 . where Hn are the Hermite polynomials \ud835\udc3b \ud835\udc5b ( \ud835\udc65 ) = ( \u2212 1 ) \ud835\udc5b \ud835\udc52 \ud835\udc65 2 \ud835\udc51 \ud835\udc5b \ud835\udc51 \ud835\udc65 \ud835\udc5b ( \ud835\udc52 \u2212 \ud835\udc65 2 ) , and the corresponding energy levels are \ud835\udc38 \ud835\udc5b = \u210f \ud835\udf14 ( \ud835\udc5b + 1 2 ) ."
+      }
+    ],
+    "changed_fields": [
+      {
+        "index": 125,
+        "field": "context"
+      },
+      {
+        "index": 126,
+        "field": "context"
+      },
+      {
+        "index": 160,
+        "field": "context"
+      }
+    ],
+    "all_fields_utf8_after": true,
+    "group_audits": [
+      {
+        "laya_tokens": 5577,
+        "laya_head_tokens": 5463,
+        "semif_tokens": 7598,
+        "markers": 255,
+        "laya_ids_sha256": "869813c32d03fb9b29c3c07aadf8058cae29690e56d917defedfd2715cf250c0",
+        "semif_ids_sha256": "a51409f814b19404861907b78f04814bc7de8ff642c6b6a71910de092933244c",
+        "fits": true
+      },
+      {
+        "laya_tokens": 5153,
+        "laya_head_tokens": 5039,
+        "semif_tokens": 7557,
+        "markers": 255,
+        "laya_ids_sha256": "d77fa96d6ca40e48cba55627d68e0241fa08c40e245650f7c4d779de52e9d0dd",
+        "semif_ids_sha256": "983a48530f023e7d00c9034be983e861f9bc2ca58df2820a4a2f3b16451b42d9",
+        "fits": true
+      },
+      {
+        "laya_tokens": 1088,
+        "laya_head_tokens": 974,
+        "semif_tokens": 1719,
+        "markers": 74,
+        "laya_ids_sha256": "6c38e2ea2c7e5c408f37713fcd9e51bc93c5f7d8799f7f9d4ada4da48a836bf0",
+        "semif_ids_sha256": "42cf94d73d18c5988dec5cf4995349f396e03b6717efb7533c73daf87c67a946",
+        "fits": true
+      }
+    ]
+  },
+  "native_laya_replay": {
+    "path": "runs/unified-255/2026-09-21-v3/repair/quantum-mechanics-native-replay.json",
+    "sha256": "3c573381ee8640fc21baf33c8228096d20bb8548c30f236ebd486317435a41c1",
+    "calls": 4,
+    "success": true,
+    "seconds_including_load": 13.314469582997845
+  }
+}

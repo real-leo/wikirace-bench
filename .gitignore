@@ -1,4 +1,8 @@
 .venv/
+.venv-mlx/
+.venv-semif/
+third_party/
+models/
 __pycache__/
 *.py[cod]
 .env

@@ -1,0 +1,97 @@
+--- before/wikirace/browser.py
++++ after/wikirace/browser.py
+@@ -94,8 +94,22 @@
+ 
+ 
+ # DrissionPage run_js requires a top-level `return` to yield a value.
++# Keep the existing UTF-16 budgets, but omit a boundary character if the slice
++# would split its surrogate pair (mathematical symbols and emoji use pairs).
++_SAFE_SLICE_JS = r"""
++const safeSlice = (value, start, end) => {
++  let first = start, last = Math.min(end, value.length);
++  const high = code => code >= 0xD800 && code <= 0xDBFF;
++  const low = code => code >= 0xDC00 && code <= 0xDFFF;
++  if (first > 0 && low(value.charCodeAt(first)) && high(value.charCodeAt(first - 1))) first++;
++  if (last > first && high(value.charCodeAt(last - 1)) && low(value.charCodeAt(last))) last--;
++  return value.slice(first, last);
++};
++"""
++
+ _VIEWPORT_LINKS_JS = r"""
+ return (() => {
++  __SAFE_SLICE__
+   const allPage = __ALL_PAGE__;
+   const root = document.querySelector('#mw-content-text')
+     || document.querySelector('#bodyContent')
+@@ -141,7 +155,7 @@
+     const key = href.split('#')[0];
+     if (seen.has(key)) continue;
+     seen.add(key);
+-    const text = (a.innerText || a.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 120);
++    const text = safeSlice((a.innerText || a.textContent || '').trim().replace(/\s+/g, ' '), 0, 120);
+     // Sentence-ish context: surrounding block text, clipped around the link
+     let context = '';
+     const block = a.closest('p, li, dd, td, th, blockquote, h1, h2, h3, h4, h5, h6') || a.parentElement;
+@@ -155,9 +169,9 @@
+         if (idx >= 0) {
+           const start = Math.max(0, idx - 100);
+           const end = Math.min(full.length, idx + needle.length + 140);
+-          context = (start > 0 ? '…' : '') + full.slice(start, end) + (end < full.length ? '…' : '');
++          context = (start > 0 ? '…' : '') + safeSlice(full, start, end) + (end < full.length ? '…' : '');
+         } else {
+-          context = full.slice(0, 240) + (full.length > 240 ? '…' : '');
++          context = safeSlice(full, 0, 240) + (full.length > 240 ? '…' : '');
+         }
+       }
+     }
+@@ -165,17 +179,18 @@
+     out.push({
+       href: key,
+       text,
+-      context: context.slice(0, 280),
++      context: safeSlice(context, 0, 280),
+       abs_y: rect.top + scrollY,
+     });
+     if (!allPage && out.length >= 80) break;
+   }
+   return out;
+ })()
+-"""
++""".replace("__SAFE_SLICE__", _SAFE_SLICE_JS)
+ 
+ _PAGE_META_JS = r"""
+ return (() => {
++  __SAFE_SLICE__
+   const h1 = document.querySelector('#firstHeading, h1.mw-first-heading, h1');
+   const title = (h1 && (h1.innerText || h1.textContent) || document.title || '')
+     .replace(/\s*-\s*Wikipedia.*$/i, '').trim();
+@@ -189,13 +204,14 @@
+     const t = (p.innerText || p.textContent || '').trim().replace(/\s+/g, ' ');
+     if (t.length > 40) { extract = t; break; }
+   }
+-  extract = extract.slice(0, 600);
++  extract = safeSlice(extract, 0, 600);
+   return { title, extract, url: location.href };
+ })()
+-"""
++""".replace("__SAFE_SLICE__", _SAFE_SLICE_JS)
+ 
+ _PAGE_STATE_JS = r"""
+ return (() => {
++  __SAFE_SLICE__
+   const root = document.querySelector('#mw-content-text, #bodyContent');
+   const heading = document.querySelector('#firstHeading, h1.mw-first-heading');
+   const nav = performance.getEntriesByType('navigation')[0];
+@@ -205,10 +221,10 @@
+     heading: (heading?.textContent || '').trim(),
+     http_status: nav?.responseStatus || null,
+     error_code: (document.querySelector('.error-code')?.textContent || '').trim(),
+-    body_excerpt: root ? '' : (document.body?.innerText || '').slice(0, 500)
++    body_excerpt: root ? '' : safeSlice((document.body?.innerText || ''), 0, 500)
+   };
+ })()
+-"""
++""".replace("__SAFE_SLICE__", _SAFE_SLICE_JS)
+ 
+ 
+ class WikiBrowser:

@@ -63,6 +63,41 @@ def make_page_env(count):
     return env, browser
 
 
+@pytest.mark.parametrize("count", [2, 256])
+def test_gemini_full_episode_can_click_and_reopen_http_for_the_next_task(monkeypatch, count):
+    pytest.importorskip("tokenizers")
+    import json
+    import httpx
+    from scripts.unified_chat_brain import ChatBackend, UnifiedChatBrain
+
+    requests = []
+    clients = []
+    def respond(request):
+        body = json.loads(request.content)
+        options = json.loads(body["messages"][1]["content"])["options"]
+        code = next((o["code"] for o in options if o["description"].startswith("Goal\n")), options[0]["code"])
+        requests.append(body)
+        return httpx.Response(200, json={"model": "models/gemini-3.8-flash",
+            "choices": [{"finish_reason": "stop", "message": {"content": json.dumps({"answers": {"next": {"choice": code}}})}}],
+            "usage": {"prompt_tokens": 11, "completion_tokens": 10}})
+    def new_client():
+        client = httpx.Client(transport=httpx.MockTransport(respond))
+        clients.append(client)
+        return client
+    brain = UnifiedChatBrain(backend=ChatBackend(client_factory=new_client, api_key="test-only"))
+    for _ in range(2):
+        env, browser = make_page_env(count)
+        monkeypatch.setattr(evaluator, "make_env", lambda *args, **kwargs: env)
+        row = evaluator.run_episode({"start": "Start", "goal": "Goal", "observation_mode": "page"}, brain)
+        assert row["status"] == "success", row["reason"]
+        assert row["brain"] == "gemini"
+        assert (row["clicks"], row["scrolls"]) == (1, 0)
+        assert row["trace"][0]["n_choice_candidates"] == count
+        assert row["api_usage"]["requests"] == (1 if count == 2 else 2)
+        assert browser.closed and clients[-1].is_closed
+    assert len(clients) == 2
+
+
 @pytest.mark.parametrize("count", [2, 255, 601])
 def test_page_pipeline_covers_all_links_and_clicks_offscreen_without_scroll(monkeypatch, count):
     env, browser = make_page_env(count)
@@ -137,6 +172,25 @@ def test_unscored_large_page_cannot_be_truncated_to_first_links():
         env.refresh_finalists()
 
 
+@pytest.mark.parametrize("name", ["laya-mlx", "semif"])
+def test_grouped_policy_offers_all_601_links_without_score_prefilter(monkeypatch, name):
+    env, browser = make_page_env(601)
+    brain = StubPageJev(monkeypatch)
+    brain.name = name
+    brain.page_selection_policy = "grouped-all"
+    monkeypatch.setattr(evaluator, "make_env", lambda *a, **kw: env)
+    events = []
+    row = evaluator.run_episode({"start": "Start", "goal": "Goal", "observation_mode": "page"},
+                                brain, progress_callback=lambda entry, status: events.append((entry, status)))
+    assert row["status"] == "success"
+    assert len(brain.requests) == 1
+    assert len(brain.requests[0]["questions"]["next"]["criteria"]) == 601
+    assert row["page_selection_policy"] == "grouped-all"
+    assert events[0][0]["action_elapsed_seconds"] <= events[0][0]["elapsed_seconds"]
+    assert events[0][1]["status"] == "success"
+    assert browser.closed
+
+
 def test_broken_page_extraction_is_not_an_empty_candidate_list(monkeypatch):
     browser = WikiBrowser()
     monkeypatch.setattr(browser, "_ensure", lambda: object())
@@ -208,14 +262,14 @@ def test_laya_post_short_circuits_single_choice():
     assert out["answers"]["next"].get("short_circuit") is True
 
 def test_laya_post_caps_large_choice_to_shortlist_k():
-    """Direct page Choice can be ≤255; Laya head_max_len needs ≤PAGE_SHORTLIST_K."""
+    """The historical CPU adapter retains its 64-option cap for reproduction."""
     brain = LayaBrain(model="laya-test")
     seen = {}
 
     def fake_predict(state, questions):
         crit = questions["next"]["criteria"]
         seen["n"] = len(crit)
-        assert len(crit) <= PAGE_SHORTLIST_K
+        assert len(crit) <= 64
         assert any(c.get("title") == "Goal Article" for c in crit.values())
         return {
             "answers": {"next": {"choice": next(iter(crit)), "type": "choice"}},
@@ -238,5 +292,5 @@ def test_laya_post_caps_large_choice_to_shortlist_k():
             }
         },
     })
-    assert seen["n"] == PAGE_SHORTLIST_K
+    assert seen["n"] == 64
     assert "next" in out["answers"]

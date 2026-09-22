@@ -935,6 +935,14 @@ def build_brain(kind: str) -> Brain:
         return JevBrain(os.environ.get("JEV_MODEL", "jev-latest"))
     if kind == "laya":
         return LayaBrain(os.environ.get("LAYA_MODEL", "convaiinnovations/laya"))
+    if kind == "laya-mlx":
+        from wikirace.laya_mlx_brain import LayaMLXBrain
+
+        return LayaMLXBrain()
+    if kind == "semif":
+        from wikirace.semif_brain import SemIfBrain
+
+        return SemIfBrain()
     if kind == "gpt":
         return OpenAICompatBrain(
             name="gpt",
@@ -1006,7 +1014,7 @@ class LayaBrain(_ScoreBookBrain):
         """Map System One payload to local Laya predict; shape expected by page_policy.
 
         Short-circuits 1-option Choice (Laya act-head topk(2) crashes on k=1).
-        Caps Choice criteria to PAGE_SHORTLIST_K when page_policy offers a direct
+        Caps legacy CPU Choice criteria to 64 when page_policy offers a direct
         Choice among ≤255 links — Laya head_max_len (~192) cannot pack that many
         rendered options (Jev/TypeSafe can). Prefer goal title, then bridge_score.
         ``timeout`` is accepted for Jev/_post API compatibility and unused locally.
@@ -1014,7 +1022,7 @@ class LayaBrain(_ScoreBookBrain):
         del timeout  # local inference; episode deadline enforced by eval loop
         if self._deadline is not None and time.perf_counter() >= self._deadline:
             raise TimeoutError("episode_deadline_exceeded")
-        from wikirace.env import PAGE_SHORTLIST_K
+        legacy_choice_limit = 64
 
         state = payload.get("state") or {}
         questions = payload.get("questions") or {}
@@ -1047,7 +1055,7 @@ class LayaBrain(_ScoreBookBrain):
                     "probabilities": {choice: 1.0},
                 }
                 continue
-            if len(criteria) > PAGE_SHORTLIST_K:
+            if len(criteria) > legacy_choice_limit:
                 def _rank(cid: str) -> tuple:
                     meta = criteria[cid] if isinstance(criteria[cid], dict) else {}
                     title = str(meta.get("title") or "")
@@ -1062,7 +1070,7 @@ class LayaBrain(_ScoreBookBrain):
                     return (is_goal, sc)
 
                 keep_ids = sorted(criteria.keys(), key=_rank, reverse=True)[
-                    :PAGE_SHORTLIST_K
+                    :legacy_choice_limit
                 ]
                 qdef = {**qdef, "criteria": {cid: criteria[cid] for cid in keep_ids}}
             remaining[qid] = qdef

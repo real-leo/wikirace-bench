@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from wikirace.brains import Brain
-from wikirace.browser import WikiBrowser
+from wikirace.browser import ARTICLE_FILTER_VERSION, WikiBrowser
 from wikirace.env import RaceEnv
 from wikirace.wiki import FixtureWiki, LiveWikipedia, WikiSource
 
@@ -62,6 +62,8 @@ def _episode_base(task: dict, brain: Brain) -> dict:
         "task_id": task.get("id"),
         "brain": brain.name,
         "model": getattr(brain, "model", None),
+        "page_selection_policy": getattr(brain, "page_selection_policy", "score-255"),
+        "article_filter_version": ARTICLE_FILTER_VERSION,
         "start": task.get("start"),
         "goal": task.get("goal"),
         "source": task.get("source", "browser"),
@@ -72,7 +74,9 @@ def _episode_base(task: dict, brain: Brain) -> dict:
 def _api_usage(debug: dict) -> dict:
     """Count Score/Choice responses without double-counting single-batch aliases."""
     responses = []
-    if debug.get("score_batches"):
+    if debug.get("unified_calls"):
+        responses.extend(call["response"] for call in debug["unified_calls"])
+    elif debug.get("score_batches"):
         responses.extend(b.get("score_response", {}) for b in debug["score_batches"])
     elif debug.get("score_response"):
         responses.append(debug["score_response"])
@@ -102,6 +106,7 @@ def run_episode(
     lang: str = "en",
     headless: bool = True,
     timeout_s: float | None = DEFAULT_TIMEOUT_S,
+    progress_callback=None,
 ) -> dict:
     """Score, refresh offered links, then choose; preserve evidence on every exit.
 
@@ -145,8 +150,10 @@ def run_episode(
         if env.browser is not None:
             setup_navigation = getattr(env.browser, "last_navigation", None)
         state = env.observe()
-        if state.observation_mode == "page" and brain.name not in {"jev", "overlap", "laya"}:
-            raise ValueError("page_mode_supports_jev_overlap_laya: use observation_mode=viewport for other brains")
+        if (state.observation_mode == "page"
+                and brain.name not in {"jev", "overlap", "laya", "laya-mlx", "semif"}
+                and not getattr(brain, "supports_page_mode", False)):
+            raise ValueError("unsupported_page_brain: use observation_mode=viewport for other brains")
         setup_seconds = time.perf_counter() - total_t0
         action_t0 = time.perf_counter()
         deadline = None if max_seconds is None else action_t0 + max_seconds
@@ -188,7 +195,9 @@ def run_episode(
                 entry["scores"] = scores
                 if scores:
                     env.ingest_scores(scores)
-                state = env.refresh_finalists()
+                if not (state.observation_mode == "page" and
+                        getattr(brain, "page_selection_policy", "score-255") == "grouped-all"):
+                    state = env.refresh_finalists()
                 entry["observation"] = state.to_public_dict()
                 entry["n_choice_candidates"] = len(state.candidates)
                 if expired():
@@ -214,6 +223,7 @@ def run_episode(
                 phase_t0 = time.perf_counter()
                 entry["action"] = action.to_public_dict()
                 moved = env.step(action)
+                entry["action_elapsed_seconds"] = round(time.perf_counter() - action_t0, 3)
                 entry.update({
                     "execution_ms": round((time.perf_counter() - phase_t0) * 1000),
                     "chosen_title": moved.title if moved.ok else None,
@@ -250,6 +260,9 @@ def run_episode(
                 entry["steps_so_far"] = env.step_count
                 entry["clicks_so_far"] = env.click_count
                 entry["scrolls_so_far"] = env.scroll_count
+                entry["elapsed_seconds"] = round(time.perf_counter() - action_t0, 3)
+                if progress_callback is not None:
+                    progress_callback(entry, {"status": status, "reason": reason, "path": list(env.path)})
     except Exception as exc:
         status, reason = "error", f"{stage}:{type(exc).__name__}: {exc}"
         error_stack = traceback.format_exc()
